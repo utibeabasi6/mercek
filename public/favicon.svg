@@ -1,0 +1,14 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1024" height="1024" rx="232" fill="#0e0f12" />
+  <!-- isometric container: top, left, right faces -->
+  <polygon points="512,236 760,380 512,524 264,380" fill="#8fbcff" />
+  <polygon points="264,380 512,524 512,792 264,648" fill="#3568b8" />
+  <polygon points="512,524 760,380 760,648 512,792" fill="#5b9dff" />
+  <!-- slats / ridges -->
+  <g stroke="#0e0f12" stroke-width="10" opacity="0.35">
+    <line x1="346" y1="428" x2="346" y2="696" />
+    <line x1="428" y1="476" x2="428" y2="744" />
+    <line x1="596" y1="476" x2="596" y2="744" />
+    <line x1="678" y1="428" x2="678" y2="696" />
+  </g>
+</svg>

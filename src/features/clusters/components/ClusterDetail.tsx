@@ -1,0 +1,166 @@
+import { useState } from "react";
+import type { Tab } from "@/app/shell";
+import { useClusterResources, useScopeGraph } from "@/features/discovery/api";
+import { SubTabs, Field, Section } from "@/components/ui/Tabs";
+import { StatusBadge, Count } from "@/components/ui/Badge";
+import { ClusterMetrics } from "@/features/metrics/components/MetricsView";
+import { shortAccount } from "@/lib/arn";
+
+export function ClusterDetail({ tab }: { tab: Tab }) {
+  const graph = useScopeGraph(tab.scope);
+  const { data: resources, isLoading } = useClusterResources(tab.scope, tab.clusterName ?? "");
+  const cluster = graph?.clusters.find((c) => c.name === tab.clusterName) ?? null;
+  const [sub, setSub] = useState("overview");
+
+  if (!graph || !cluster) {
+    return <div className="p-6 text-fg-muted">cluster {tab.label} not in current scope</div>;
+  }
+
+  const services = resources?.services ?? [];
+  const insightsOff = cluster.settings.containerInsights === "disabled";
+  const instances = resources?.containerInstances ?? [];
+  const providerOf = (name: string) => graph.capacityProviders.find((p) => p.name === name);
+
+  return (
+    <div className="flex h-full flex-col">
+      <header className="flex items-center gap-3 px-4 py-3">
+        <h2 className="text-fg">{cluster.name}</h2>
+        <StatusBadge status={cluster.status} />
+        <span className="ml-auto text-[12px] text-fg-muted">
+          {shortAccount(graph.accountId)} · {graph.scope.region}
+        </span>
+      </header>
+
+      <SubTabs
+        tabs={[
+          { id: "overview", label: "overview" },
+          { id: "metrics", label: "metrics" },
+        ]}
+        active={sub}
+        onChange={setSub}
+      />
+
+      {sub === "overview" ? (
+        <div className="flex flex-col gap-6 overflow-auto p-4">
+          <div className="flex gap-6">
+            <Count label="services" value={cluster.stats.activeServices} />
+            <Count label="running" value={cluster.stats.runningTasks} tone="ok" />
+            <Count
+              label="pending"
+              value={cluster.stats.pendingTasks}
+              tone={cluster.stats.pendingTasks > 0 ? "warn" : undefined}
+            />
+            <Count label="container instances" value={cluster.stats.containerInstances} />
+          </div>
+
+          <Section title="capacity providers">
+            <div className="flex max-w-2xl flex-col">
+              {cluster.capacityProviders.map((name) => {
+                const p = providerOf(name);
+                return (
+                  <div
+                    key={name}
+                    className="flex items-center gap-3 border-t border-border py-1.5"
+                  >
+                    <span className="w-56 truncate text-fg">{name}</span>
+                    <span className="text-fg-dim">{p?.kind ?? "—"}</span>
+                    {p && <span className="ml-auto"><StatusBadge status={p.status} /></span>}
+                  </div>
+                );
+              })}
+              {cluster.capacityProviders.length === 0 && (
+                <span className="text-fg-muted">none</span>
+              )}
+            </div>
+          </Section>
+
+          <Section title="default strategy">
+            <table className="w-full max-w-2xl text-left">
+              <thead className="text-[11px] uppercase text-fg-muted">
+                <tr>
+                  <th className="py-1 font-normal">provider</th>
+                  <th className="py-1 font-normal">base</th>
+                  <th className="py-1 font-normal">weight</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cluster.defaultStrategy.map((s) => (
+                  <tr key={s.capacityProvider} className="border-t border-border">
+                    <td className="py-1 text-fg">{s.capacityProvider}</td>
+                    <td className="py-1 tabular-nums text-fg-dim">{s.base}</td>
+                    <td className="py-1 tabular-nums text-fg-dim">{s.weight}</td>
+                  </tr>
+                ))}
+                {cluster.defaultStrategy.length === 0 && (
+                  <tr>
+                    <td className="py-1 text-fg-muted" colSpan={3}>
+                      none
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </Section>
+
+          <Section title="container instances">
+            {isLoading ? (
+              <div className="text-fg-muted">loading…</div>
+            ) : instances.length === 0 ? (
+              <div className="text-fg-muted">none (Fargate launch type)</div>
+            ) : (
+              <div className="flex flex-col">
+                {instances.map((ci) => (
+                  <div
+                    key={ci.arn}
+                    className="flex items-center gap-3 border-t border-border py-1.5"
+                  >
+                    <span className="w-56 truncate text-fg">{ci.ec2InstanceId ?? "—"}</span>
+                    <StatusBadge status={ci.status} />
+                    <span className="text-fg-dim">{ci.agentConnected ? "agent ✓" : "agent ✕"}</span>
+                    <span className="ml-auto tabular-nums text-fg-dim">
+                      {ci.runningTasksCount} running
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Section>
+
+          <Section title="settings">
+            <Field label="container insights">
+              {cluster.settings.containerInsights || "disabled"}
+            </Field>
+            {insightsOff && (
+              <div className="max-w-2xl rounded border border-border bg-bg-elev px-3 py-2 text-[12px] text-fg-dim">
+                Container Insights off — limited metrics; enable for per-task detail.
+              </div>
+            )}
+          </Section>
+
+          <Section title="services">
+            {isLoading ? (
+              <div className="text-fg-muted">loading…</div>
+            ) : (
+              <div className="flex flex-col">
+                {services.map((s) => (
+                  <div
+                    key={s.arn}
+                    className="flex items-center gap-3 border-t border-border py-1.5"
+                  >
+                    <span className="w-40 truncate text-fg">{s.name}</span>
+                    <StatusBadge status={s.status} />
+                    <span className="ml-auto tabular-nums text-fg-dim">
+                      {s.running}/{s.desired}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Section>
+        </div>
+      ) : (
+        <ClusterMetrics scope={graph.scope} cluster={cluster.name} />
+      )}
+    </div>
+  );
+}

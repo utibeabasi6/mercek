@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useShell } from "@/app/shell";
 import { LogTailPanel } from "@/features/logs/components/LogTailPanel";
 
@@ -8,14 +8,44 @@ type Panel = (typeof PANELS)[number];
 export function Drawer() {
   const { drawerOpen, toggleDrawer, activeTab } = useShell();
   const [panel, setPanel] = useState<Panel>("logs");
+  const [height, setHeight] = useState(() => {
+    const v = Number(localStorage.getItem("mercek.drawerHeight"));
+    return v >= 120 && v <= 700 ? v : 256;
+  });
+  useEffect(() => {
+    localStorage.setItem("mercek.drawerHeight", String(height));
+  }, [height]);
 
   if (!drawerOpen) return null;
+
+  const startResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const startY = e.clientY;
+    const startH = height;
+    const onMove = (ev: MouseEvent) =>
+      setHeight(Math.min(700, Math.max(120, startH + (startY - ev.clientY))));
+    const onUp = () => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+    document.body.style.cursor = "row-resize";
+    document.body.style.userSelect = "none";
+  };
 
   const taskTab =
     activeTab?.kind === "task" && activeTab.clusterName && activeTab.taskArn ? activeTab : null;
 
   return (
-    <div className="flex h-64 flex-col border-t border-border bg-bg">
+    <div className="flex flex-col bg-bg" style={{ height }}>
+      <div
+        onMouseDown={startResize}
+        className="h-1 shrink-0 cursor-row-resize bg-border transition-colors hover:bg-accent"
+        title="drag to resize"
+      />
       <div className="flex items-center gap-1 border-b border-border px-2">
         {PANELS.map((p) => (
           <button
@@ -36,7 +66,7 @@ export function Drawer() {
           type="button"
           onClick={toggleDrawer}
           aria-label="close drawer"
-          className="ml-auto text-fg-muted hover:text-fg"
+          className="ml-auto flex size-6 items-center justify-center rounded text-[16px] leading-none text-fg-muted hover:bg-bg-elev-2 hover:text-fg"
         >
           ✕
         </button>

@@ -1,3 +1,4 @@
+pub mod agent;
 pub mod cluster;
 pub mod common;
 pub mod container_instance;
@@ -12,6 +13,7 @@ pub mod target_health;
 pub mod task;
 pub mod task_def;
 
+pub use agent::*;
 pub use cluster::*;
 pub use common::*;
 pub use container_instance::*;

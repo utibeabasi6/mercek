@@ -1,23 +1,34 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Tab } from "@/app/shell";
 import { useClusterResources, useTaskDefinition } from "@/features/discovery/api";
-import { useEni } from "@/features/tasks/api";
+import { useEni, useStopTask } from "@/features/tasks/api";
+import { RegisterDialog } from "@/features/tasks/components/RegisterDialog";
 import { SubTabs, Field, Section } from "@/components/ui/Tabs";
 import { StatusBadge } from "@/components/ui/Badge";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { toneFor } from "@/lib/status";
 import { arnName, taskDefShort } from "@/lib/arn";
+import { appErrorMessage } from "@/lib/errors";
 import { modLabel } from "@/app/keybindings";
+import type { AppError } from "@/types";
 
 export function TaskDetail({ tab }: { tab: Tab }) {
-  const { data: resources, isLoading } = useClusterResources(tab.scope, tab.clusterName ?? "");
+  const { data: resources, isLoading } = useClusterResources(tab.scope, tab.clusterName ?? "", true, true);
   const task = resources?.tasks.find((t) => t.arn === tab.taskArn) ?? null;
-  const [sub, setSub] = useState("containers");
+  const [sub, setSub] = useState(tab.section ?? "containers");
+  useEffect(() => {
+    if (tab.section) setSub(tab.section);
+  }, [tab.section, tab.focusId]);
   const { data: taskDef } = useTaskDefinition(
     tab.scope,
     task?.taskDefArn,
     sub === "env" || sub === "volumes",
   );
   const { data: eni } = useEni(tab.scope, task?.networking?.eniId, sub === "networking");
+  const [confirmStop, setConfirmStop] = useState(false);
+  const [registering, setRegistering] = useState(false);
+  const [reason, setReason] = useState("");
+  const stop = useStopTask(tab.scope, tab.clusterName ?? "");
 
   if (!task) {
     return (
@@ -28,6 +39,7 @@ export function TaskDetail({ tab }: { tab: Tab }) {
   }
 
   const net = task.networking;
+  const stoppable = task.lastStatus === "RUNNING" || task.lastStatus === "PENDING";
 
   return (
     <div className="flex h-full flex-col">
@@ -39,13 +51,51 @@ export function TaskDetail({ tab }: { tab: Tab }) {
         </span>
         <button
           type="button"
-          disabled
-          title="write paths land in Phase 2"
-          className="ml-auto cursor-not-allowed rounded border border-border px-2 py-1 text-fg-muted opacity-70"
+          disabled={!stoppable}
+          onClick={() => setConfirmStop(true)}
+          title={stoppable ? undefined : "task is not running"}
+          className="ml-auto rounded border border-border px-2 py-1 text-fg-dim hover:border-err hover:text-err disabled:cursor-not-allowed disabled:text-fg-muted disabled:opacity-70 disabled:hover:border-border"
         >
           stop task
         </button>
       </header>
+
+      {confirmStop && (
+        <ConfirmDialog
+          title={
+            <>
+              stop task <span className="text-accent">{arnName(task.arn).slice(0, 12)}</span>
+            </>
+          }
+          confirmLabel="stop task"
+          danger
+          busy={stop.isPending}
+          errorMessage={stop.isError ? appErrorMessage(stop.error as unknown as AppError) : undefined}
+          onConfirm={() =>
+            stop.mutate(
+              { task: task.arn, reason: reason.trim() || undefined },
+              { onSuccess: () => setConfirmStop(false) },
+            )
+          }
+          onClose={() => setConfirmStop(false)}
+        >
+          <div className="flex flex-col gap-2">
+            <span>
+              ECS will stop the task and the scheduler may replace it to maintain desired count.
+            </span>
+            <input
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="reason (optional)"
+              className="rounded border border-border bg-bg-elev-2 px-2 py-1 text-fg outline-none focus:border-accent"
+            />
+          </div>
+        </ConfirmDialog>
+      )}
+
+      {registering && taskDef && (
+        <RegisterDialog scope={tab.scope} taskDef={taskDef} onClose={() => setRegistering(false)} />
+      )}
 
       <SubTabs
         tabs={[
@@ -133,6 +183,18 @@ export function TaskDetail({ tab }: { tab: Tab }) {
             {!taskDef && (
               <div className="text-fg-muted">
                 task definition {taskDefShort(task.taskDefArn)} not loaded
+              </div>
+            )}
+            {taskDef && (
+              <div className="flex items-center gap-3">
+                <span className="text-fg-dim">{taskDefShort(taskDef.arn)}</span>
+                <button
+                  type="button"
+                  onClick={() => setRegistering(true)}
+                  className="rounded border border-border px-2 py-1 text-fg-dim hover:border-border-strong hover:text-fg"
+                >
+                  register new revision
+                </button>
               </div>
             )}
             {taskDef?.containerDefs.map((cd) => (

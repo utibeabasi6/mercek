@@ -10,18 +10,17 @@ async fn shallow_discovery_then_lazy_cluster_resources() {
         profile: "prod".into(),
         region: "us-east-1".into(),
     };
-    let mock = MockEcs::new(&scope);
-    let account = mock.account_id();
-    let api: Arc<dyn EcsApi> = Arc::new(mock);
+    let api: Arc<dyn EcsApi> = Arc::new(MockEcs::new(&scope));
 
     // Shallow pass: clusters + capacity providers only, no services/tasks.
-    let graph = discover_clusters(api.clone(), scope, account)
+    let graph = discover_clusters(api.clone(), scope)
         .await
         .expect("shallow discovery succeeds");
     assert_eq!(graph.clusters.len(), 2, "frontend + backend clusters");
     assert!(!graph.capacity_providers.is_empty());
     assert!(graph.services.is_empty(), "services are lazy, not in shallow pass");
     assert!(graph.tasks.is_empty(), "tasks are lazy, not in shallow pass");
+    // account id is derived from the cluster ARNs (no STS).
     assert_eq!(graph.account_id.as_deref(), Some("111111111111"));
 
     // Lazy per-cluster: resources load on demand.

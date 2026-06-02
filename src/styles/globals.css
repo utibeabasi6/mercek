@@ -71,13 +71,31 @@ body {
   background: transparent;
 }
 
-button {
+button,
+input,
+select {
   font-family: inherit;
   font-size: inherit;
+}
+
+button:not(:disabled),
+[role="button"],
+select:not(:disabled),
+summary,
+input[type="checkbox"]:not(:disabled),
+input[type="radio"]:not(:disabled) {
   cursor: pointer;
 }
 
-input {
-  font-family: inherit;
-  font-size: inherit;
+button:disabled {
+  cursor: not-allowed;
+}
+
+@keyframes mercek-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }

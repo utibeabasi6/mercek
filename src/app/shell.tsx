@@ -20,6 +20,10 @@ export interface Tab {
   clusterName?: string;
   serviceName?: string;
   taskArn?: string;
+  // Deep-link targets (agent-panel spec §6). Not part of `id`, so re-opening a
+  // tab at a different section focuses the existing tab instead of duplicating.
+  section?: string;
+  focusId?: string;
 }
 
 export type PaletteMode = "command" | "resource";
@@ -38,8 +42,16 @@ function tabsReducer(state: TabsState, action: TabsAction): TabsState {
   switch (action.type) {
     case "open": {
       const exists = state.tabs.some((t) => t.id === action.tab.id);
+      // Re-opening an existing tab re-points its deep-link target (§6) so an
+      // agent "navigate" can move you to a different section of an open tab.
       return {
-        tabs: exists ? state.tabs : [...state.tabs, action.tab],
+        tabs: exists
+          ? state.tabs.map((t) =>
+              t.id === action.tab.id
+                ? { ...t, section: action.tab.section, focusId: action.tab.focusId }
+                : t,
+            )
+          : [...state.tabs, action.tab],
         activeTabId: action.tab.id,
       };
     }
@@ -76,6 +88,9 @@ interface ShellCtx {
   drawerOpen: boolean;
   toggleDrawer: () => void;
 
+  agentOpen: boolean;
+  toggleAgent: () => void;
+
   paletteOpen: boolean;
   paletteMode: PaletteMode;
   openPalette: (mode: PaletteMode) => void;
@@ -90,6 +105,7 @@ export function ShellProvider({ children }: { children: ReactNode }) {
     activeTabId: null,
   });
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [agentOpen, setAgentOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteMode, setPaletteMode] = useState<PaletteMode>("command");
 
@@ -115,6 +131,7 @@ export function ShellProvider({ children }: { children: ReactNode }) {
   }, []);
   const closePalette = useCallback(() => setPaletteOpen(false), []);
   const toggleDrawer = useCallback(() => setDrawerOpen((v) => !v), []);
+  const toggleAgent = useCallback(() => setAgentOpen((v) => !v), []);
 
   const activeTab = useMemo(
     () => tabs.find((t) => t.id === activeTabId) ?? null,
@@ -133,6 +150,8 @@ export function ShellProvider({ children }: { children: ReactNode }) {
       closeActiveTab,
       drawerOpen,
       toggleDrawer,
+      agentOpen,
+      toggleAgent,
       paletteOpen,
       paletteMode,
       openPalette,
@@ -149,6 +168,8 @@ export function ShellProvider({ children }: { children: ReactNode }) {
       closeActiveTab,
       drawerOpen,
       toggleDrawer,
+      agentOpen,
+      toggleAgent,
       paletteOpen,
       paletteMode,
       openPalette,

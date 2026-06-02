@@ -1,16 +1,26 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Tab } from "@/app/shell";
 import { useClusterResources, useScopeGraph } from "@/features/discovery/api";
 import { SubTabs, Field, Section } from "@/components/ui/Tabs";
 import { StatusBadge, Count } from "@/components/ui/Badge";
 import { ClusterMetrics } from "@/features/metrics/components/MetricsView";
+import { RunTaskDialog } from "@/features/tasks/components/RunTaskDialog";
 import { shortAccount } from "@/lib/arn";
 
 export function ClusterDetail({ tab }: { tab: Tab }) {
   const graph = useScopeGraph(tab.scope);
-  const { data: resources, isLoading } = useClusterResources(tab.scope, tab.clusterName ?? "");
+  const { data: resources, isLoading } = useClusterResources(
+    tab.scope,
+    tab.clusterName ?? "",
+    true,
+    true,
+  );
   const cluster = graph?.clusters.find((c) => c.name === tab.clusterName) ?? null;
-  const [sub, setSub] = useState("overview");
+  const [sub, setSub] = useState(tab.section ?? "overview");
+  const [running, setRunning] = useState(false);
+  useEffect(() => {
+    if (tab.section) setSub(tab.section);
+  }, [tab.section, tab.focusId]);
 
   if (!graph || !cluster) {
     return <div className="p-6 text-fg-muted">cluster {tab.label} not in current scope</div>;
@@ -26,10 +36,23 @@ export function ClusterDetail({ tab }: { tab: Tab }) {
       <header className="flex items-center gap-3 px-4 py-3">
         <h2 className="text-fg">{cluster.name}</h2>
         <StatusBadge status={cluster.status} />
-        <span className="ml-auto text-[12px] text-fg-muted">
-          {shortAccount(graph.accountId)} · {graph.scope.region}
-        </span>
+        <div className="ml-auto flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setRunning(true)}
+            className="rounded border border-border px-2 py-1 text-fg-dim hover:border-border-strong hover:text-fg"
+          >
+            run task
+          </button>
+          <span className="text-[12px] text-fg-muted">
+            {shortAccount(graph.accountId)} · {graph.scope.region}
+          </span>
+        </div>
       </header>
+
+      {running && (
+        <RunTaskDialog scope={graph.scope} cluster={cluster.name} onClose={() => setRunning(false)} />
+      )}
 
       <SubTabs
         tabs={[

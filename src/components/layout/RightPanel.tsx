@@ -1,5 +1,13 @@
-// Reserved for the agent surface (spec §11.6). Intentionally renders nothing in
-// this build; the layout slot and this stub exist so enabling it later is additive.
-export function RightPanel() {
-  return null;
+import { AgentPanel } from "@/features/agent/components/AgentPanel";
+
+// The reserved agent surface (spec §11.6), now lit up. Width + visibility are
+// owned by AppShell (mirrors the Drawer); this just renders the panel at the
+// given width when open.
+export function RightPanel({ open, width }: { open: boolean; width: number }) {
+  if (!open) return null;
+  return (
+    <div style={{ width }} className="shrink-0 border-l border-border">
+      <AgentPanel />
+    </div>
+  );
 }

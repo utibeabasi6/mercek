@@ -25,6 +25,7 @@ export function TabBar() {
             <button
               type="button"
               onClick={() => focusTab(tab.id)}
+              title={tab.sublabel ? `${tab.label} · ${tab.sublabel}` : tab.label}
               className="flex min-w-0 items-center gap-2"
             >
               <span className="text-fg-muted">{KIND_GLYPH[tab.kind]}</span>
@@ -36,7 +37,7 @@ export function TabBar() {
             <button
               type="button"
               onClick={() => closeTab(tab.id)}
-              className="text-fg-muted opacity-0 hover:text-fg group-hover:opacity-100"
+              className="flex size-5 items-center justify-center rounded text-[15px] leading-none text-fg-muted opacity-0 hover:bg-bg-elev-2 hover:text-fg group-hover:opacity-100"
               aria-label="close tab"
             >
               ✕

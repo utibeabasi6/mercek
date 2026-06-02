@@ -1,3 +1,4 @@
+pub mod agent;
 pub mod aws;
 pub mod commands;
 pub mod db;
@@ -35,18 +36,33 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            commands::agent::agent_list,
+            commands::agent::agent_connect,
+            commands::agent::agent_prompt,
+            commands::agent::agent_cancel,
+            commands::agent::agent_disconnect,
             commands::profiles::list_profiles,
             commands::profiles::get_scopes,
             commands::profiles::set_scopes,
+            commands::profiles::throttle_active,
             commands::discovery::discover,
             commands::discovery::discover_activated,
             commands::discovery::snapshot_activated,
             commands::discovery::cluster_resources,
             commands::discovery::task_definition,
+            commands::discovery::list_task_definitions,
+            commands::discovery::list_task_def_families,
             commands::services::target_health,
             commands::services::scaling,
+            commands::services::scale_service,
+            commands::services::update_service,
+            commands::services::force_deploy,
+            commands::tasks::stop_task,
+            commands::tasks::run_task,
+            commands::tasks::register_revision,
             commands::metrics::service_metrics,
             commands::metrics::cluster_metrics,
+            commands::metrics::alb_metrics,
             commands::logs::start_log_tail,
             commands::logs::stop_log_tail,
             commands::tasks::describe_eni,

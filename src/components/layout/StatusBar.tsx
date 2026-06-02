@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useShell } from "@/app/shell";
 import { useGraphs } from "@/features/discovery/api";
+import { invoke } from "@/lib/tauri";
 import { shortAccount } from "@/lib/arn";
 import { freshness, pluralize } from "@/lib/format";
 
@@ -8,6 +10,11 @@ export function StatusBar() {
   const { activeTab } = useShell();
   const { graphs, isFetching, fromCache, stale } = useGraphs();
   const cached = fromCache || stale;
+  const { data: throttled } = useQuery({
+    queryKey: ["throttle"],
+    queryFn: () => invoke("throttle_active"),
+    refetchInterval: 3000,
+  });
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -48,7 +55,8 @@ export function StatusBar() {
         <span>no scope active</span>
       )}
       <span className="ml-auto flex items-center gap-1">
-        throttle <span className="text-fg-dim">○</span>
+        throttle{" "}
+        <span className={throttled ? "text-err" : "text-fg-dim"}>{throttled ? "●" : "○"}</span>
       </span>
     </div>
   );

@@ -48,7 +48,9 @@ export function ScopeSelector() {
                 {isActive ? "✓" : ""}
               </span>
               <StatusGlyph tone={reauth ? "err" : toneFor(p.status)} />
-              <span className="truncate">{p.name}</span>
+              <span className="truncate" title={p.name}>
+                {p.name}
+              </span>
               <span className="ml-auto truncate text-[11px] text-fg-muted">
                 {reauth ? "reauth" : (p.regionDefault ?? "—")}
               </span>

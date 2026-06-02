@@ -9,23 +9,17 @@ use crate::error::AppResult;
 use crate::resources::ecs::{EcsApi, MockEcs};
 use crate::state::AppState;
 
-async fn ecs_api(
-    state: &AppState,
-    scope: &Scope,
-) -> AppResult<(Arc<dyn EcsApi>, Option<String>)> {
+async fn ecs_api(state: &AppState, scope: &Scope) -> AppResult<Arc<dyn EcsApi>> {
     if use_mock() {
-        let mock = MockEcs::new(scope);
-        let account = mock.account_id();
-        Ok((Arc::new(mock), account))
+        Ok(Arc::new(MockEcs::new(scope)))
     } else {
-        let clients = state.pool.get(scope).await?;
-        Ok((clients.ecs.clone(), clients.account_id.clone()))
+        Ok(state.pool.get(scope).await?.ecs.clone())
     }
 }
 
 async fn discover_one(state: &AppState, scope: Scope) -> AppResult<ResourceGraph> {
-    let (api, account) = ecs_api(state, &scope).await?;
-    let graph = discover_clusters(api, scope, account).await?;
+    let api = ecs_api(state, &scope).await?;
+    let graph = discover_clusters(api, scope).await?;
     if let Err(err) = state.store.save_snapshot(&graph) {
         tracing::warn!(error = %err, "failed to persist cluster snapshot");
     }
@@ -40,9 +34,18 @@ pub async fn discover(state: State<'_, AppState>, scope: Scope) -> AppResult<Res
 #[tauri::command]
 pub async fn discover_activated(state: State<'_, AppState>) -> AppResult<Vec<ScopeDiscovery>> {
     let scopes = state.store.get_scopes()?;
+    let st = state.inner();
+
+    // Fan out across activated scopes concurrently (multi-account speed).
+    let results = futures::future::join_all(scopes.into_iter().map(|scope| async move {
+        let result = discover_one(st, scope.clone()).await;
+        (scope, result)
+    }))
+    .await;
+
     let mut out = Vec::new();
-    for scope in scopes {
-        match discover_one(state.inner(), scope.clone()).await {
+    for (scope, result) in results {
+        match result {
             Ok(graph) => out.push(ScopeDiscovery {
                 scope,
                 graph: Some(graph),
@@ -56,7 +59,7 @@ pub async fn discover_activated(state: State<'_, AppState>) -> AppResult<Vec<Sco
                     error = %err,
                     "cluster discovery failed; surfacing error + snapshot"
                 );
-                let snapshot = state.store.load_snapshot(&scope).ok().flatten();
+                let snapshot = st.store.load_snapshot(&scope).ok().flatten();
                 out.push(ScopeDiscovery {
                     scope,
                     stale: snapshot.is_some(),
@@ -87,7 +90,7 @@ pub async fn cluster_resources(
     scope: Scope,
     cluster: String,
 ) -> AppResult<ClusterResources> {
-    let (api, _) = ecs_api(state.inner(), &scope).await?;
+    let api = ecs_api(state.inner(), &scope).await?;
     fetch_cluster_resources(api, cluster).await
 }
 
@@ -97,6 +100,25 @@ pub async fn task_definition(
     scope: Scope,
     arn: String,
 ) -> AppResult<TaskDefinition> {
-    let (api, _) = ecs_api(state.inner(), &scope).await?;
+    let api = ecs_api(state.inner(), &scope).await?;
     api.describe_task_definition(&arn).await
+}
+
+#[tauri::command]
+pub async fn list_task_definitions(
+    state: State<'_, AppState>,
+    scope: Scope,
+    family: String,
+) -> AppResult<Vec<String>> {
+    let api = ecs_api(state.inner(), &scope).await?;
+    api.list_task_definitions(&family).await
+}
+
+#[tauri::command]
+pub async fn list_task_def_families(
+    state: State<'_, AppState>,
+    scope: Scope,
+) -> AppResult<Vec<String>> {
+    let api = ecs_api(state.inner(), &scope).await?;
+    api.list_task_def_families().await
 }

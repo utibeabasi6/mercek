@@ -1,4 +1,7 @@
 // Re-exports of ts-rs generated types. Generated files live in ./generated and are never hand-edited.
+export type { AgentInfo } from "./generated/AgentInfo";
+export type { AgentIntent } from "./generated/AgentIntent";
+export type { AgentSessionUpdate } from "./generated/AgentSessionUpdate";
 export type { AppError } from "./generated/AppError";
 export type { Attachment } from "./generated/Attachment";
 export type { Attribute } from "./generated/Attribute";
@@ -48,6 +51,8 @@ export type { ManagedStorageConfiguration } from "./generated/ManagedStorageConf
 export type { MetricPoint } from "./generated/MetricPoint";
 export type { MetricSeries } from "./generated/MetricSeries";
 export type { MountPoint } from "./generated/MountPoint";
+export type { NavigateIntent } from "./generated/NavigateIntent";
+export type { NavigateTarget } from "./generated/NavigateTarget";
 export type { NetworkBinding } from "./generated/NetworkBinding";
 export type { NetworkConfiguration } from "./generated/NetworkConfiguration";
 export type { Networking } from "./generated/Networking";
@@ -56,6 +61,7 @@ export type { PlacementStrategy } from "./generated/PlacementStrategy";
 export type { PortMapping } from "./generated/PortMapping";
 export type { ProfileKind } from "./generated/ProfileKind";
 export type { ProfileStatus } from "./generated/ProfileStatus";
+export type { ProposedAction } from "./generated/ProposedAction";
 export type { ProxyConfiguration } from "./generated/ProxyConfiguration";
 export type { RepositoryCredentials } from "./generated/RepositoryCredentials";
 export type { Resource } from "./generated/Resource";
@@ -79,6 +85,7 @@ export type { TargetHealth } from "./generated/TargetHealth";
 export type { Task } from "./generated/Task";
 export type { TaskDefinition } from "./generated/TaskDefinition";
 export type { TaskOverride } from "./generated/TaskOverride";
+export type { ToolCallStatus } from "./generated/ToolCallStatus";
 export type { Ulimit } from "./generated/Ulimit";
 export type { VersionInfo } from "./generated/VersionInfo";
 export type { Volume } from "./generated/Volume";

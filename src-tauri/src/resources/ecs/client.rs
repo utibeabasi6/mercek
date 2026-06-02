@@ -1,5 +1,8 @@
 use async_trait::async_trait;
-use aws_sdk_ecs::types::{ClusterField, ServiceField, TaskField};
+use aws_sdk_ecs::types::{
+    ClusterField, ServiceField, SortOrder, TaskDefinitionFamilyStatus, TaskDefinitionStatus,
+    TaskField,
+};
 use aws_sdk_ecs::Client;
 use aws_smithy_types::error::metadata::ProvideErrorMetadata;
 
@@ -25,6 +28,10 @@ pub trait EcsApi: Send + Sync {
     ) -> AppResult<Vec<ContainerInstance>>;
     async fn describe_capacity_providers(&self) -> AppResult<Vec<CapacityProvider>>;
     async fn describe_task_definition(&self, arn: &str) -> AppResult<TaskDefinition>;
+    /// Active task-definition ARNs for a family, newest revision first.
+    async fn list_task_definitions(&self, family: &str) -> AppResult<Vec<String>>;
+    /// Active task-definition family names.
+    async fn list_task_def_families(&self) -> AppResult<Vec<String>>;
 }
 
 pub struct SdkEcs {
@@ -72,6 +79,7 @@ pub fn classify<E: ProvideErrorMetadata>(profile: &str, e: E) -> AppError {
         || code == "RequestLimitExceeded"
         || probe.contains("rate exceeded")
     {
+        crate::aws::retry::note_throttle();
         AppError::Throttled
     } else {
         AppError::Aws {
@@ -277,6 +285,50 @@ impl EcsApi for SdkEcs {
             .map(map::task_definition)
             .ok_or_else(|| AppError::NotFound { resource: arn.to_string() })
     }
+
+    async fn list_task_definitions(&self, family: &str) -> AppResult<Vec<String>> {
+        let mut arns = Vec::new();
+        let mut next = None;
+        loop {
+            let resp = self
+                .ecs
+                .list_task_definitions()
+                .family_prefix(family)
+                .status(TaskDefinitionStatus::Active)
+                .sort(SortOrder::Desc)
+                .set_next_token(next)
+                .send()
+                .await
+                .map_err(|e| self.err(e))?;
+            arns.extend(resp.task_definition_arns().iter().cloned());
+            next = resp.next_token().map(String::from);
+            if next.is_none() {
+                break;
+            }
+        }
+        Ok(arns)
+    }
+
+    async fn list_task_def_families(&self) -> AppResult<Vec<String>> {
+        let mut families = Vec::new();
+        let mut next = None;
+        loop {
+            let resp = self
+                .ecs
+                .list_task_definition_families()
+                .status(TaskDefinitionFamilyStatus::Active)
+                .set_next_token(next)
+                .send()
+                .await
+                .map_err(|e| self.err(e))?;
+            families.extend(resp.families().iter().cloned());
+            next = resp.next_token().map(String::from);
+            if next.is_none() {
+                break;
+            }
+        }
+        Ok(families)
+    }
 }
 
 pub struct MockEcs {
@@ -372,5 +424,23 @@ impl EcsApi for MockEcs {
             .find(|t| t.arn == arn)
             .cloned()
             .ok_or_else(|| AppError::NotFound { resource: arn.to_string() })
+    }
+
+    async fn list_task_definitions(&self, family: &str) -> AppResult<Vec<String>> {
+        Ok(self
+            .graph
+            .task_definitions
+            .iter()
+            .filter(|t| t.family == family)
+            .map(|t| t.arn.clone())
+            .collect())
+    }
+
+    async fn list_task_def_families(&self) -> AppResult<Vec<String>> {
+        let mut families: Vec<String> =
+            self.graph.task_definitions.iter().map(|t| t.family.clone()).collect();
+        families.sort();
+        families.dedup();
+        Ok(families)
     }
 }

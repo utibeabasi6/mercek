@@ -15,6 +15,8 @@ use crate::resources::logs::{LogsApi, SdkLogs};
 
 pub struct ScopeClients {
     pub ecs: Arc<dyn EcsApi>,
+    /// Raw ECS client for write paths (mutations always hit real AWS, no mock seam).
+    pub ecs_client: aws_sdk_ecs::Client,
     pub elb: Arc<dyn ElbApi>,
     pub autoscaling: Arc<dyn AutoscalingApi>,
     pub cloudwatch: Arc<dyn CloudwatchApi>,
@@ -35,10 +37,13 @@ impl ClientPool {
         }
 
         let config = credentials::load_config(&scope.profile, &scope.region).await;
-        let account_id = credentials::caller_account(&config, &scope.profile).await.ok();
+        // account id comes from resource ARNs during discovery — no STS round-trip here.
+        let account_id = None;
 
+        let ecs_client = aws_sdk_ecs::Client::new(&config);
         let clients = Arc::new(ScopeClients {
-            ecs: Arc::new(SdkEcs::new(aws_sdk_ecs::Client::new(&config), scope.profile.clone())),
+            ecs: Arc::new(SdkEcs::new(ecs_client.clone(), scope.profile.clone())),
+            ecs_client,
             elb: Arc::new(SdkElb::new(
                 aws_sdk_elasticloadbalancingv2::Client::new(&config),
                 scope.profile.clone(),

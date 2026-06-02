@@ -27,3 +27,9 @@ pub fn get_scopes(state: State<'_, AppState>) -> AppResult<Vec<Scope>> {
 pub fn set_scopes(state: State<'_, AppState>, scopes: Vec<Scope>) -> AppResult<()> {
     state.store.set_scopes(&scopes)
 }
+
+/// True when AWS throttled a request recently (status-bar indicator).
+#[tauri::command]
+pub fn throttle_active() -> bool {
+    crate::aws::retry::throttled_recently()
+}

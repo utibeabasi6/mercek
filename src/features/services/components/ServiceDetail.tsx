@@ -1,21 +1,69 @@
-import { useState } from "react";
-import type { Tab } from "@/app/shell";
+import { useEffect, useRef, useState } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
+import { useShell, type Tab } from "@/app/shell";
 import { useClusterResources } from "@/features/discovery/api";
+import { taskTab } from "@/features/discovery/tabs";
+import { useForceDeploy } from "@/features/services/api";
 import { SubTabs, Field } from "@/components/ui/Tabs";
 import { StatusBadge, StatusGlyph, Count } from "@/components/ui/Badge";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { DataTable } from "@/components/ui/DataTable";
+import type { Task } from "@/types";
+
+const taskColumns: ColumnDef<Task, unknown>[] = [
+  {
+    id: "task",
+    header: "task",
+    accessorFn: (t) => arnName(t.arn).slice(0, 12),
+    cell: (c) => <span className="text-accent">{c.getValue<string>()}</span>,
+  },
+  {
+    id: "status",
+    header: "status",
+    accessorFn: (t) => t.lastStatus,
+    cell: (c) => <StatusBadge status={c.getValue<string>()} tone={toneFor(c.getValue<string>())} />,
+  },
+  { id: "health", header: "health", accessorFn: (t) => t.health },
+  { id: "cpu", header: "cpu", accessorFn: (t) => t.cpu ?? "—" },
+  { id: "memory", header: "memory", accessorFn: (t) => t.memory ?? "—" },
+  {
+    id: "started",
+    header: "started",
+    accessorFn: (t) => t.startedAt ?? "",
+    cell: (c) => (
+      <span className="text-fg-muted">{relativeTime(c.getValue<string>() || null)}</span>
+    ),
+  },
+];
 import { TargetsPanel } from "@/features/services/components/TargetsPanel";
 import { ScalingPanel } from "@/features/services/components/ScalingPanel";
+import { ScaleDialog } from "@/features/services/components/ScaleDialog";
+import { UpdateDialog } from "@/features/services/components/UpdateDialog";
 import { ServiceMetrics } from "@/features/metrics/components/MetricsView";
 import { toneFor } from "@/lib/status";
 import { relativeTime } from "@/lib/format";
+import { appErrorMessage } from "@/lib/errors";
 import { taskDefShort, arnName } from "@/lib/arn";
-
-const ACTIONS = ["scale", "update", "force deploy"];
+import type { AppError } from "@/types";
 
 export function ServiceDetail({ tab }: { tab: Tab }) {
-  const { data: resources, isLoading } = useClusterResources(tab.scope, tab.clusterName ?? "");
+  const { data: resources, isLoading } = useClusterResources(tab.scope, tab.clusterName ?? "", true, true);
   const service = resources?.services.find((s) => s.name === tab.serviceName) ?? null;
-  const [sub, setSub] = useState("overview");
+  const [sub, setSub] = useState(tab.section ?? "overview");
+  const [scaling, setScaling] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  const [confirmDeploy, setConfirmDeploy] = useState(false);
+  const forceDeploy = useForceDeploy(tab.scope, tab.clusterName ?? "");
+  const { openTab } = useShell();
+  const focusRef = useRef<HTMLDivElement | null>(null);
+
+  // An agent "navigate" can re-point this tab's section/focus while it's open (§6).
+  useEffect(() => {
+    if (tab.section) setSub(tab.section);
+  }, [tab.section, tab.focusId]);
+  useEffect(() => {
+    if (sub === "deployments" && tab.focusId) focusRef.current?.scrollIntoView({ block: "center" });
+  }, [sub, tab.focusId, service]);
 
   if (!service) {
     return (
@@ -36,19 +84,59 @@ export function ServiceDetail({ tab }: { tab: Tab }) {
         <StatusBadge status={service.status} tone={deploying ? "warn" : undefined} />
         <span className="text-[12px] text-fg-muted">{service.cluster}</span>
         <div className="ml-auto flex items-center gap-1.5">
-          {ACTIONS.map((a) => (
-            <button
-              key={a}
-              type="button"
-              disabled
-              title="write paths land in Phase 2"
-              className="cursor-not-allowed rounded border border-border px-2 py-1 text-fg-muted opacity-70"
-            >
-              {a}
-            </button>
-          ))}
+          <button
+            type="button"
+            onClick={() => setScaling(true)}
+            className="rounded border border-border px-2 py-1 text-fg-dim hover:border-border-strong hover:text-fg"
+          >
+            scale
+          </button>
+          <button
+            type="button"
+            onClick={() => setConfirmDeploy(true)}
+            className="rounded border border-border px-2 py-1 text-fg-dim hover:border-border-strong hover:text-fg"
+          >
+            force deploy
+          </button>
+          <button
+            type="button"
+            onClick={() => setUpdating(true)}
+            className="rounded border border-border px-2 py-1 text-fg-dim hover:border-border-strong hover:text-fg"
+          >
+            update
+          </button>
         </div>
       </header>
+
+      {scaling && (
+        <ScaleDialog scope={tab.scope} service={service} onClose={() => setScaling(false)} />
+      )}
+
+      {updating && (
+        <UpdateDialog scope={tab.scope} service={service} onClose={() => setUpdating(false)} />
+      )}
+
+      {confirmDeploy && (
+        <ConfirmDialog
+          title={
+            <>
+              force new deployment of <span className="text-accent">{service.name}</span>
+            </>
+          }
+          confirmLabel="force deploy"
+          busy={forceDeploy.isPending}
+          errorMessage={
+            forceDeploy.isError ? appErrorMessage(forceDeploy.error as unknown as AppError) : undefined
+          }
+          onConfirm={() =>
+            forceDeploy.mutate(service.name, { onSuccess: () => setConfirmDeploy(false) })
+          }
+          onClose={() => setConfirmDeploy(false)}
+        >
+          Rolling-restart all {service.running} task(s) using the current task definition (
+          {taskDefShort(service.taskDefArn)}). Tasks are replaced per the deployment configuration.
+        </ConfirmDialog>
+      )}
 
       <SubTabs
         tabs={[
@@ -64,7 +152,11 @@ export function ServiceDetail({ tab }: { tab: Tab }) {
         onChange={setSub}
       />
 
-      <div className="flex-1 overflow-auto p-4">
+      <div
+        className={`flex-1 p-4 ${
+          sub === "tasks" ? "flex min-h-0 flex-col" : "overflow-auto"
+        }`}
+      >
         {sub === "overview" && (
           <div className="flex flex-col gap-6">
             <div className="flex items-center gap-6">
@@ -111,17 +203,26 @@ export function ServiceDetail({ tab }: { tab: Tab }) {
 
         {sub === "deployments" && (
           <div className="flex flex-col">
-            {service.deployments.map((d) => (
-              <div key={d.id} className="flex items-center gap-3 border-b border-border py-2">
-                <StatusGlyph tone={d.rolloutState === "in_progress" ? "warn" : "ok"} />
-                <span className="w-20 text-fg">{d.status}</span>
-                <span className="text-fg-dim">{taskDefShort(d.taskDef)}</span>
-                <span className="ml-auto tabular-nums text-fg-dim">
-                  {d.running}/{d.desired}
-                </span>
-                <span className="w-24 text-right text-fg-muted">{relativeTime(d.createdAt)}</span>
-              </div>
-            ))}
+            {service.deployments.map((d) => {
+              const focused = d.id === tab.focusId;
+              return (
+                <div
+                  key={d.id}
+                  ref={focused ? focusRef : undefined}
+                  className={`flex items-center gap-3 border-b border-border py-2 ${
+                    focused ? "rounded bg-bg-elev px-2 ring-1 ring-accent" : ""
+                  }`}
+                >
+                  <StatusGlyph tone={d.rolloutState === "in_progress" ? "warn" : "ok"} />
+                  <span className="w-20 text-fg">{d.status}</span>
+                  <span className="text-fg-dim">{taskDefShort(d.taskDef)}</span>
+                  <span className="ml-auto tabular-nums text-fg-dim">
+                    {d.running}/{d.desired}
+                  </span>
+                  <span className="w-24 text-right text-fg-muted">{relativeTime(d.createdAt)}</span>
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -137,32 +238,15 @@ export function ServiceDetail({ tab }: { tab: Tab }) {
         )}
 
         {sub === "tasks" && (
-          <table className="w-full text-left">
-            <thead className="text-[11px] uppercase text-fg-muted">
-              <tr>
-                <th className="py-1 font-normal">task</th>
-                <th className="py-1 font-normal">status</th>
-                <th className="py-1 font-normal">health</th>
-                <th className="py-1 font-normal">cpu</th>
-                <th className="py-1 font-normal">memory</th>
-                <th className="py-1 font-normal">started</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tasks.map((t) => (
-                <tr key={t.arn} className="border-t border-border">
-                  <td className="py-1 text-fg">{arnName(t.arn).slice(0, 12)}</td>
-                  <td className="py-1">
-                    <StatusBadge status={t.lastStatus} tone={toneFor(t.lastStatus)} />
-                  </td>
-                  <td className="py-1 text-fg-dim">{t.health}</td>
-                  <td className="py-1 tabular-nums text-fg-dim">{t.cpu ?? "—"}</td>
-                  <td className="py-1 tabular-nums text-fg-dim">{t.memory ?? "—"}</td>
-                  <td className="py-1 text-fg-muted">{relativeTime(t.startedAt)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <DataTable
+            data={tasks}
+            columns={taskColumns}
+            persistKey="service-tasks"
+            getRowId={(t) => t.arn}
+            onRowClick={(t) => openTab(taskTab(tab.scope, t))}
+            exportName={`${service.name}-tasks`}
+            filterPlaceholder="filter tasks…"
+          />
         )}
 
         {sub === "targets" && <TargetsPanel scope={tab.scope} service={service} />}
@@ -172,7 +256,14 @@ export function ServiceDetail({ tab }: { tab: Tab }) {
         )}
 
         {sub === "metrics" && (
-          <ServiceMetrics scope={tab.scope} cluster={service.cluster} service={service.name} />
+          <ServiceMetrics
+            scope={tab.scope}
+            cluster={service.cluster}
+            service={service.name}
+            targetGroupArn={
+              service.loadBalancers.find((lb) => lb.targetGroupArn)?.targetGroupArn ?? undefined
+            }
+          />
         )}
       </div>
     </div>

@@ -53,7 +53,9 @@ function Row({
         {expandable ? (open ? "▾" : "▸") : ""}
       </span>
       {glyph}
-      <span className="truncate">{label}</span>
+      <span className="truncate" title={label}>
+        {label}
+      </span>
       {trailing != null && <span className="ml-auto shrink-0 text-fg-muted">{trailing}</span>}
     </button>
   );
@@ -125,7 +127,7 @@ function ClusterBranch({
                       {s.running}/{s.desired}
                     </span>
                   }
-                  active={activeTabId === tabId("service", graph.scope, s.name)}
+                  active={activeTabId === tabId("service", graph.scope, `${s.cluster}/${s.name}`)}
                   onActivate={() => openTab(serviceTab(graph.scope, s))}
                 />
               ))

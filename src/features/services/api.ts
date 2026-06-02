@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { invoke } from "@/lib/tauri";
 import { qk } from "@/lib/query-keys";
 import { REFETCH_MS } from "@/lib/query-client";
@@ -19,5 +19,42 @@ export function useScaling(scope: Scope, cluster: string, service: string, enabl
     queryFn: () => invoke("scaling", { scope, cluster, service }),
     enabled,
     staleTime: 60_000,
+  });
+}
+
+// Write path: scale a service's desired count, then reconcile the cluster's resources.
+export function useScaleService(scope: Scope, cluster: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { service: string; desiredCount: number }) =>
+      invoke("scale_service", { scope, cluster, ...vars }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: qk.clusterResources(scope, cluster) });
+    },
+  });
+}
+
+export function useForceDeploy(scope: Scope, cluster: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (service: string) => invoke("force_deploy", { scope, cluster, service }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: qk.clusterResources(scope, cluster) });
+    },
+  });
+}
+
+export function useUpdateService(scope: Scope, cluster: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: {
+      service: string;
+      taskDefinition?: string;
+      minimumHealthyPercent?: number;
+      maximumPercent?: number;
+    }) => invoke("update_service", { scope, cluster, ...vars }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: qk.clusterResources(scope, cluster) });
+    },
   });
 }

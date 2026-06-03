@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.2.1",
-    "astro": "^5.2.5"
+    "astro": "^6.4.3"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.6",

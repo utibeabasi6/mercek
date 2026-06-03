@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { IconButton } from "@/components/ui/IconButton";
 import { useRegisterRevision } from "@/features/tasks/api";
 import { Select } from "@/components/ui/Select";
 import { DiffView } from "@/components/ui/DiffView";
@@ -250,14 +251,14 @@ function RowEditor({
             onChange={(e) => set(i, { value: e.target.value })}
             className="min-w-0 flex-1 rounded border border-border bg-bg-elev-2 px-2 py-1 text-fg outline-none focus:border-accent"
           />
-          <button
-            type="button"
+          <IconButton
+            size="sm"
             onClick={() => onChange(rows.filter((_, j) => j !== i))}
-            className="flex size-6 shrink-0 items-center justify-center rounded text-[15px] leading-none text-fg-muted hover:bg-bg-elev-2 hover:text-err"
+            className="hover:!text-err"
             aria-label="remove"
           >
             ✕
-          </button>
+          </IconButton>
         </div>
       ))}
     </section>

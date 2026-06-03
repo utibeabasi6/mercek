@@ -13,15 +13,19 @@ import { CommandPalette, type PaletteCommand } from "@/components/ui/CommandPale
 import { ReauthBanner } from "@/features/profiles/components/ReauthBanner";
 import { DiscoveryBanner } from "@/features/discovery/components/DiscoveryBanner";
 import { RefreshButton } from "@/components/layout/RefreshButton";
+import { IconButton } from "@/components/ui/IconButton";
+import { SettingsDialog } from "@/features/settings/SettingsDialog";
 
 function Titlebar({
   onSearch,
   agentOpen,
   onToggleAgent,
+  onSettings,
 }: {
   onSearch: () => void;
   agentOpen: boolean;
   onToggleAgent: () => void;
+  onSettings: () => void;
 }) {
   const { theme, toggleTheme } = useTheme();
   return (
@@ -35,15 +39,21 @@ function Titlebar({
         search resources… <span className="float-right">{modLabel} P</span>
       </button>
       <RefreshButton />
-      <button
-        type="button"
+      <IconButton
         onClick={toggleTheme}
-        className="group flex size-8 items-center justify-center rounded text-[20px] leading-none text-fg-muted hover:bg-bg-elev hover:text-fg"
+        className="group"
         title={`switch to ${theme === "dark" ? "light" : "dark"} theme`}
       >
         <span className="group-hover:hidden">{theme === "dark" ? "☾" : "☀"}</span>
         <span className="hidden group-hover:inline">{theme === "dark" ? "☀" : "☾"}</span>
-      </button>
+      </IconButton>
+      <IconButton
+        onClick={onSettings}
+        title="settings"
+        className="duration-300 hover:rotate-90"
+      >
+        ⚙
+      </IconButton>
       <button
         type="button"
         onClick={onToggleAgent}
@@ -81,6 +91,7 @@ export function AppShell() {
     localStorage.setItem("mercek.railWidth", String(railWidth));
   }, [railWidth]);
 
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [agentWidth, setAgentWidth] = useState(() => {
     const stored = Number(localStorage.getItem("mercek.rightPanelWidth"));
     return stored >= 280 && stored <= 720 ? stored : 380;
@@ -189,6 +200,7 @@ export function AppShell() {
         onSearch={() => openPalette("resource")}
         agentOpen={agentOpen}
         onToggleAgent={toggleAgent}
+        onSettings={() => setSettingsOpen(true)}
       />
       <ReauthBanner />
       <DiscoveryBanner />
@@ -212,6 +224,7 @@ export function AppShell() {
       <Drawer />
       <StatusBar />
       <CommandPalette commands={commands} />
+      {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} />}
     </div>
   );
 }

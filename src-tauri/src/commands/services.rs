@@ -1,13 +1,8 @@
-use std::sync::Arc;
-
 use tauri::State;
 
-use crate::commands::profiles::use_mock;
 use crate::domain::{ScalingView, Scope, Service, TargetHealth};
 use crate::error::AppResult;
-use crate::resources::autoscaling::{AutoscalingApi, MockAutoscaling};
 use crate::resources::ecs::mutate;
-use crate::resources::elb::{ElbApi, MockElb};
 use crate::state::AppState;
 
 /// Scale a service's desired count. Write path — always real AWS, never mocked.
@@ -72,11 +67,7 @@ pub async fn target_health(
     scope: Scope,
     target_group_arn: String,
 ) -> AppResult<Vec<TargetHealth>> {
-    let api: Arc<dyn ElbApi> = if use_mock() {
-        Arc::new(MockElb)
-    } else {
-        state.pool.get(&scope).await?.elb.clone()
-    };
+    let api = state.pool.get(&scope).await?.elb.clone();
     api.describe_target_health(&target_group_arn).await
 }
 
@@ -88,10 +79,6 @@ pub async fn scaling(
     service: String,
 ) -> AppResult<ScalingView> {
     let resource_id = format!("service/{cluster}/{service}");
-    let api: Arc<dyn AutoscalingApi> = if use_mock() {
-        Arc::new(MockAutoscaling)
-    } else {
-        state.pool.get(&scope).await?.autoscaling.clone()
-    };
+    let api = state.pool.get(&scope).await?.autoscaling.clone();
     api.scaling(&resource_id).await
 }

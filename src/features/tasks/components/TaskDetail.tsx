@@ -5,6 +5,8 @@ import { useEni, useStopTask } from "@/features/tasks/api";
 import { RegisterDialog } from "@/features/tasks/components/RegisterDialog";
 import { SubTabs, Field, Section } from "@/components/ui/Tabs";
 import { StatusBadge } from "@/components/ui/Badge";
+import { LoadingState, ErrorState, EmptyState } from "@/components/ui/StateView";
+import { InvestigateButton } from "@/features/agent/components/InvestigateButton";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { toneFor } from "@/lib/status";
 import { arnName, taskDefShort } from "@/lib/arn";
@@ -13,7 +15,12 @@ import { modLabel } from "@/app/keybindings";
 import type { AppError } from "@/types";
 
 export function TaskDetail({ tab }: { tab: Tab }) {
-  const { data: resources, isLoading } = useClusterResources(tab.scope, tab.clusterName ?? "", true, true);
+  const { data: resources, isLoading, isError, error, refetch } = useClusterResources(
+    tab.scope,
+    tab.clusterName ?? "",
+    true,
+    true,
+  );
   const task = resources?.tasks.find((t) => t.arn === tab.taskArn) ?? null;
   const [sub, setSub] = useState(tab.section ?? "containers");
   useEffect(() => {
@@ -31,15 +38,25 @@ export function TaskDetail({ tab }: { tab: Tab }) {
   const stop = useStopTask(tab.scope, tab.clusterName ?? "");
 
   if (!task) {
-    return (
-      <div className="p-6 text-fg-muted">
-        {isLoading ? "loading task…" : `task ${tab.label} not found`}
-      </div>
-    );
+    if (isLoading) return <LoadingState label="loading task…" />;
+    if (isError) {
+      return (
+        <ErrorState
+          title="couldn't load this task"
+          detail={appErrorMessage(error as unknown as AppError)}
+          onRetry={() => void refetch()}
+        />
+      );
+    }
+    return <EmptyState label={`task ${tab.label} not found (it may have stopped)`} />;
   }
 
   const net = task.networking;
   const stoppable = task.lastStatus === "RUNNING" || task.lastStatus === "PENDING";
+  const failed =
+    task.lastStatus === "STOPPED" ||
+    !!task.stoppedReason ||
+    task.containers.some((c) => c.exitCode != null && c.exitCode !== 0);
 
   return (
     <div className="flex h-full flex-col">
@@ -49,15 +66,25 @@ export function TaskDetail({ tab }: { tab: Tab }) {
         <span className="text-[12px] text-fg-muted">
           {task.service ?? "—"} · {task.cluster}
         </span>
-        <button
-          type="button"
-          disabled={!stoppable}
-          onClick={() => setConfirmStop(true)}
-          title={stoppable ? undefined : "task is not running"}
-          className="ml-auto rounded border border-border px-2 py-1 text-fg-dim hover:border-err hover:text-err disabled:cursor-not-allowed disabled:text-fg-muted disabled:opacity-70 disabled:hover:border-border"
-        >
-          stop task
-        </button>
+        <div className="ml-auto flex items-center gap-2">
+          {failed && (
+            <InvestigateButton
+              title="diagnose why this task stopped"
+              message={`Investigate why task ${task.arn} in cluster ${task.cluster}${
+                task.service ? ` (service ${task.service})` : ""
+              } stopped. Correlate its stoppedReason and container exit codes with the service's events and the deployment that introduced it, check recent logs, and tell me the root cause and a fix.`}
+            />
+          )}
+          <button
+            type="button"
+            disabled={!stoppable}
+            onClick={() => setConfirmStop(true)}
+            title={stoppable ? undefined : "task is not running"}
+            className="rounded border border-border px-2 py-1 text-fg-dim hover:border-err hover:text-err disabled:cursor-not-allowed disabled:text-fg-muted disabled:opacity-70 disabled:hover:border-border"
+          >
+            stop task
+          </button>
+        </div>
       </header>
 
       {confirmStop && (

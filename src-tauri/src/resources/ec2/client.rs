@@ -39,8 +39,10 @@ impl Ec2Api for SdkEc2 {
     }
 }
 
+#[cfg(feature = "mock")]
 pub struct MockEc2;
 
+#[cfg(feature = "mock")]
 #[async_trait]
 impl Ec2Api for MockEc2 {
     async fn describe_eni(&self, eni_id: &str) -> AppResult<EniDetail> {

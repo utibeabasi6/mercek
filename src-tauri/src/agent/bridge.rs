@@ -1,11 +1,11 @@
-//! The read-only contract, in code (agent-panel spec §4).
+//! The read-only contract, in code.
 //!
 //! The agent's entire tool surface is the read tools plus two non-executing
 //! UI-intent tools. No tool here reaches an AWS mutation: a `propose_action`
 //! call opens a prefilled-but-unconfirmed dialog and `navigate` opens a tab —
 //! the human, clicking confirm, is the only thing that ever writes to AWS.
 
-/// AWS read tools (spec §5). Each maps to an existing read command / `resources/*`
+/// AWS read tools. Each maps to an existing read command / `resources/*`
 /// read — one fetch path, same pool and cache discipline as the UI.
 pub const READ_TOOLS: &[&str] = &[
     "list_scopes",
@@ -24,7 +24,7 @@ pub const READ_TOOLS: &[&str] = &[
     "list_open_tabs",
 ];
 
-/// Non-executing UI effects (spec §5, §5.1, §6). They emit an intent to the
+/// Non-executing UI effects. They emit an intent to the
 /// shell and call no AWS mutation.
 pub const UI_INTENT_TOOLS: &[&str] = &["navigate", "propose_action"];
 
@@ -42,7 +42,7 @@ pub const WRITE_COMMANDS: &[&str] = &[
     "reveal_secret",
 ];
 
-/// How the guard classifies an inbound tool name before dispatch (spec §4.3).
+/// How the guard classifies an inbound tool name before dispatch.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ToolClass {
     /// AWS read — dispatch through `resources/*`.
@@ -79,14 +79,14 @@ pub fn registered_tools() -> Vec<&'static str> {
 mod tests {
     use super::*;
 
-    /// The headline invariant (spec §4): no tool the agent can name is a write.
+    /// The headline invariant: no tool the agent can name is a write.
     #[test]
     fn no_registered_tool_is_a_write() {
         for tool in registered_tools() {
             assert!(
                 !WRITE_COMMANDS.contains(&tool),
                 "tool `{tool}` is registered for the agent but is a write command — \
-                 the agent panel must be read-only (spec §4)"
+                 the agent panel must be read-only"
             );
             assert_ne!(
                 classify(tool),

@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useGraphs } from "@/features/discovery/api";
 import { qk } from "@/lib/query-keys";
 import { Spinner } from "@/components/ui/Spinner";
+import { IconButton } from "@/components/ui/IconButton";
 
 export function RefreshButton() {
   const qc = useQueryClient();
@@ -14,20 +15,14 @@ export function RefreshButton() {
   };
 
   return (
-    <button
-      type="button"
-      onClick={refresh}
-      title="refresh"
-      aria-label="refresh"
-      className="group flex size-8 items-center justify-center rounded text-fg-muted hover:bg-bg-elev hover:text-fg"
-    >
+    <IconButton onClick={refresh} title="refresh" aria-label="refresh" className="group">
       {isFetching ? (
         <Spinner className="size-5" />
       ) : (
-        <span className="inline-block text-[20px] leading-none transition-transform duration-300 group-hover:rotate-180">
+        <span className="inline-block transition-transform duration-300 group-hover:rotate-180">
           ⟳
         </span>
       )}
-    </button>
+    </IconButton>
   );
 }

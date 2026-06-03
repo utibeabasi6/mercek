@@ -3,7 +3,7 @@ use ts_rs::TS;
 
 use crate::domain::Scope;
 
-/// A coding-agent harness the user can connect over ACP (agent-panel spec §7).
+/// A coding-agent harness the user can connect over ACP.
 /// Detection is best-effort (binary on `PATH`); installation and auth are the
 /// harness's own concern — Mercek stores no model credentials.
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -17,7 +17,7 @@ pub struct AgentInfo {
     pub install_hint: Option<String>,
 }
 
-/// A draft mutation the agent surfaces for the human to confirm (spec §5.1).
+/// A draft mutation the agent surfaces for the human to confirm.
 /// Non-executing: emitting one only opens the existing prefilled diff+confirm
 /// dialog — the mutation fires when the human clicks confirm, never the agent.
 /// The union is closed to shapes Mercek already has a safe confirm dialog for;
@@ -62,7 +62,7 @@ pub enum ProposedAction {
     },
 }
 
-/// Which kind of detail screen a `navigate` intent targets (spec §6).
+/// Which kind of detail screen a `navigate` intent targets.
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
 #[ts(export, export_to = "../../src/types/generated/")]
@@ -73,7 +73,7 @@ pub enum NavigateTarget {
 }
 
 /// "Take me there." Resolved by `agent/navigate.rs` and emitted on the navigate
-/// channel; the shell turns it into the matching tab via `openTab` (spec §6).
+/// channel; the shell turns it into the matching tab via `openTab`.
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export, export_to = "../../src/types/generated/")]
@@ -88,8 +88,29 @@ pub struct NavigateIntent {
     pub focus_id: Option<String>,
 }
 
+/// A permission/operating mode the connected harness advertises (ACP session
+/// modes, e.g. "Default", "Plan Mode", "Accept Edits", "Bypass Permissions").
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../src/types/generated/")]
+pub struct AgentMode {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+}
+
+/// What `agent_connect` returns: the harness's available modes + the current one,
+/// so the panel can show a mode selector (the empty case = harness has no modes).
+#[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../src/types/generated/")]
+pub struct ConnectInfo {
+    pub modes: Vec<AgentMode>,
+    pub current_mode: Option<String>,
+}
+
 /// A UI effect the agent asked for, carried to the shell on the intent channel
-/// (spec §5.1, §6). `navigate` opens/focuses a tab; `propose` opens the existing
+///. `navigate` opens/focuses a tab; `propose` opens the existing
 /// prefilled diff+confirm dialog. Neither touches AWS — only the human's confirm
 /// click does.
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -107,14 +128,14 @@ pub enum AgentIntent {
 pub enum ToolCallStatus {
     Pending,
     Ok,
-    /// Refused by the read-only guard (spec §4.3).
+    /// Refused by the read-only guard.
     Blocked,
     Failed,
 }
 
 /// One streamed update from an agent turn, carried to the panel over a channel
-/// (the streaming analogue of logs/metrics, `mercek.md` §12.1). Tool-call args
-/// and summaries are already redacted of secret-shaped values (`mercek.md` §15).
+///. Tool-call args
+/// and summaries are already redacted of secret-shaped values.
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(tag = "type", rename_all = "camelCase")]
 #[ts(export, export_to = "../../src/types/generated/")]

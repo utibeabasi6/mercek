@@ -1,4 +1,5 @@
 import { useShell, type TabKind } from "@/app/shell";
+import { IconButton } from "@/components/ui/IconButton";
 
 const KIND_GLYPH: Record<TabKind, string> = {
   cluster: "▣",
@@ -7,7 +8,7 @@ const KIND_GLYPH: Record<TabKind, string> = {
 };
 
 export function TabBar() {
-  const { tabs, activeTabId, focusTab, closeTab } = useShell();
+  const { tabs, activeTabId, focusTab, closeTab, agentFlash } = useShell();
 
   if (tabs.length === 0) return null;
 
@@ -18,10 +19,22 @@ export function TabBar() {
         return (
           <div
             key={tab.id}
-            className={`group flex min-w-0 items-center gap-2 border-r border-border px-3 ${
+            className={`group relative flex min-w-0 items-center gap-2 border-r border-border px-3 ${
               active ? "bg-bg-elev text-fg" : "text-fg-muted hover:text-fg-dim"
             }`}
           >
+            {agentFlash?.tabId === tab.id && (
+              <span
+                key={agentFlash.seq}
+                aria-hidden
+                className="pointer-events-none absolute inset-0 z-10 ring-2 ring-inset ring-accent"
+                style={{ animation: "mercek-agent-flash 2.2s ease-out forwards" }}
+              >
+                <span className="absolute right-1 top-0.5 text-[10px] leading-none text-accent">
+                  ✨
+                </span>
+              </span>
+            )}
             <button
               type="button"
               onClick={() => focusTab(tab.id)}
@@ -34,14 +47,14 @@ export function TabBar() {
                 <span className="truncate text-[11px] text-fg-muted">{tab.sublabel}</span>
               )}
             </button>
-            <button
-              type="button"
+            <IconButton
+              size="sm"
               onClick={() => closeTab(tab.id)}
-              className="flex size-5 items-center justify-center rounded text-[15px] leading-none text-fg-muted opacity-0 hover:bg-bg-elev-2 hover:text-fg group-hover:opacity-100"
+              className="opacity-0 group-hover:opacity-100"
               aria-label="close tab"
             >
               ✕
-            </button>
+            </IconButton>
           </div>
         );
       })}

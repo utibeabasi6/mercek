@@ -3,7 +3,7 @@ import type { ToolCallStatus } from "./ToolCallStatus";
 
 /**
  * One streamed update from an agent turn, carried to the panel over a channel
- * (the streaming analogue of logs/metrics, `mercek.md` §12.1). Tool-call args
- * and summaries are already redacted of secret-shaped values (`mercek.md` §15).
+ *. Tool-call args
+ * and summaries are already redacted of secret-shaped values.
  */
 export type AgentSessionUpdate = { "type": "messageChunk", text: string, } | { "type": "thoughtChunk", text: string, } | { "type": "toolCall", id: string, tool: string, args: string, status: ToolCallStatus, } | { "type": "toolResult", id: string, status: ToolCallStatus, summary: string | null, } | { "type": "done", stopReason: string, } | { "type": "error", message: string, };

@@ -49,8 +49,10 @@ impl AutoscalingApi for SdkAutoscaling {
     }
 }
 
+#[cfg(feature = "mock")]
 pub struct MockAutoscaling;
 
+#[cfg(feature = "mock")]
 #[async_trait]
 impl AutoscalingApi for MockAutoscaling {
     async fn scaling(&self, _resource_id: &str) -> AppResult<ScalingView> {

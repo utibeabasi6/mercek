@@ -1,3 +1,7 @@
+// Drives the orchestrator against the mock ECS client (spec §13). Compiled only
+// with the `mock` feature; `cargo test --features mock` runs it.
+#![cfg(feature = "mock")]
+
 use std::sync::Arc;
 
 use mercek_lib::discovery::{cluster_resources, discover_clusters};

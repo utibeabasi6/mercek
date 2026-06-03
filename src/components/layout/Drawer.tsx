@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { IconButton } from "@/components/ui/IconButton";
 import { useShell } from "@/app/shell";
 import { LogTailPanel } from "@/features/logs/components/LogTailPanel";
 
@@ -56,20 +57,15 @@ export function Drawer() {
             className={`-mb-px border-b px-2 py-1.5 disabled:opacity-50 ${
               panel === p ? "border-accent text-fg" : "border-transparent text-fg-muted"
             }`}
-            title={p === "terminal" ? "ECS Exec terminal lands in Phase 4" : undefined}
+            title={p === "terminal" ? "ECS Exec terminal — not yet available" : undefined}
           >
             {p}
             {p === "terminal" && " ⋯"}
           </button>
         ))}
-        <button
-          type="button"
-          onClick={toggleDrawer}
-          aria-label="close drawer"
-          className="ml-auto flex size-6 items-center justify-center rounded text-[16px] leading-none text-fg-muted hover:bg-bg-elev-2 hover:text-fg"
-        >
+        <IconButton onClick={toggleDrawer} aria-label="close drawer" className="ml-auto">
           ✕
-        </button>
+        </IconButton>
       </div>
 
       <div className="min-h-0 flex-1">
@@ -88,7 +84,7 @@ export function Drawer() {
           <div className="p-3 text-fg-muted">service / task events aggregate here (next).</div>
         )}
         {panel === "terminal" && (
-          <div className="p-3 text-fg-muted">ECS Exec session (Phase 4).</div>
+          <div className="p-3 text-fg-muted">ECS Exec session — not yet available.</div>
         )}
       </div>
     </div>

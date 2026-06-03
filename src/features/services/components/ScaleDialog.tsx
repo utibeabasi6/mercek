@@ -12,7 +12,7 @@ export function ScaleDialog({
   scope: Scope;
   service: Service;
   onClose: () => void;
-  // Prefill (e.g. an agent proposal, agent-panel spec §5.1); defaults to current.
+  // Prefill; defaults to current.
   initialDesired?: number;
 }) {
   const [desired, setDesired] = useState(initialDesired ?? service.desired);

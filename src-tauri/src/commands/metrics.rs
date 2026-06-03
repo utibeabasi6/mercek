@@ -3,11 +3,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use tauri::State;
 
-use crate::commands::profiles::use_mock;
 use crate::domain::{MetricSeries, Scope};
 use crate::error::AppResult;
-use crate::resources::cloudwatch::{CloudwatchApi, MetricQuery, MockCloudwatch};
-use crate::resources::elb::{ElbApi, MockElb};
+use crate::resources::cloudwatch::{CloudwatchApi, MetricQuery};
 use crate::state::AppState;
 
 const WINDOW_SECS: i64 = 3 * 3600;
@@ -22,11 +20,7 @@ fn window() -> (i64, i64) {
 }
 
 async fn cloudwatch(state: &AppState, scope: &Scope) -> AppResult<Arc<dyn CloudwatchApi>> {
-    if use_mock() {
-        Ok(Arc::new(MockCloudwatch))
-    } else {
-        Ok(state.pool.get(scope).await?.cloudwatch.clone())
-    }
+    Ok(state.pool.get(scope).await?.cloudwatch.clone())
 }
 
 fn metric(
@@ -89,11 +83,7 @@ pub async fn alb_metrics(
     scope: Scope,
     target_group_arn: String,
 ) -> AppResult<Vec<MetricSeries>> {
-    let elb: Arc<dyn ElbApi> = if use_mock() {
-        Arc::new(MockElb)
-    } else {
-        state.pool.get(&scope).await?.elb.clone()
-    };
+    let elb = state.pool.get(&scope).await?.elb.clone();
     let lb_arn = elb.target_group_lb_arn(&target_group_arn).await?;
 
     let mut dimensions = Vec::new();

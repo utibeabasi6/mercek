@@ -1,6 +1,7 @@
 import { useAlbMetrics, useClusterMetrics, useServiceMetrics } from "@/features/metrics/api";
 import { useScopeGraph } from "@/features/discovery/api";
 import { MetricChart } from "@/features/metrics/components/MetricChart";
+import { LoadingState, EmptyState } from "@/components/ui/StateView";
 import type { MetricSeries, Scope } from "@/types";
 
 function useContainerInsights(scope: Scope, cluster: string): boolean {
@@ -11,10 +12,10 @@ function useContainerInsights(scope: Scope, cluster: string): boolean {
 
 function Grid({ series, isLoading }: { series: MetricSeries[]; isLoading: boolean }) {
   if (isLoading && series.length === 0) {
-    return <div className="p-4 text-fg-muted">loading metrics…</div>;
+    return <LoadingState label="loading metrics…" />;
   }
   if (series.length === 0) {
-    return <div className="p-4 text-fg-muted">no metric data in the window</div>;
+    return <EmptyState label="no metric data in the window" />;
   }
   return (
     <div className="grid grid-cols-1 gap-6 p-4 xl:grid-cols-2">

@@ -4,7 +4,7 @@ import type { Scope } from "./Scope";
 
 /**
  * "Take me there." Resolved by `agent/navigate.rs` and emitted on the navigate
- * channel; the shell turns it into the matching tab via `openTab` (spec §6).
+ * channel; the shell turns it into the matching tab via `openTab`.
  */
 export type NavigateIntent = { scope: Scope, target: NavigateTarget, 
 /**

@@ -1,11 +1,7 @@
-use std::sync::Arc;
-
 use tauri::State;
 
-use crate::commands::profiles::use_mock;
 use crate::domain::{EniDetail, EnvVar, Scope, SecretRef, Task, TaskDefinition};
 use crate::error::AppResult;
-use crate::resources::ec2::{Ec2Api, MockEc2};
 use crate::resources::ecs::mutate;
 use crate::resources::ecs::mutate::ContainerEdit;
 use crate::state::AppState;
@@ -40,11 +36,7 @@ pub async fn describe_eni(
     scope: Scope,
     eni_id: String,
 ) -> AppResult<EniDetail> {
-    let api: Arc<dyn Ec2Api> = if use_mock() {
-        Arc::new(MockEc2)
-    } else {
-        state.pool.get(&scope).await?.ec2.clone()
-    };
+    let api = state.pool.get(&scope).await?.ec2.clone();
     api.describe_eni(&eni_id).await
 }
 

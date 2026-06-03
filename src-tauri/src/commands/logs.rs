@@ -1,12 +1,8 @@
-use std::sync::Arc;
-
 use tauri::ipc::Channel;
 use tauri::State;
 
-use crate::commands::profiles::use_mock;
 use crate::domain::{LogEvent, Scope};
 use crate::error::AppResult;
-use crate::resources::logs::{LogsApi, MockLogs};
 use crate::state::AppState;
 use crate::streaming::logs::run_tail;
 
@@ -18,11 +14,7 @@ pub async fn start_log_tail(
     log_stream: String,
     on_event: Channel<LogEvent>,
 ) -> AppResult<u64> {
-    let api: Arc<dyn LogsApi> = if use_mock() {
-        Arc::new(MockLogs)
-    } else {
-        state.pool.get(&scope).await?.logs.clone()
-    };
+    let api = state.pool.get(&scope).await?.logs.clone();
     let handle = tokio::spawn(async move {
         if let Err(err) = run_tail(api, log_group, log_stream, on_event).await {
             tracing::warn!(error = %err, "log tail ended with error");

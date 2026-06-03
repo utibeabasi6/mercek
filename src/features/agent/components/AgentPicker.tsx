@@ -2,9 +2,8 @@ import { useAgents } from "@/features/agent/api";
 import { Spinner } from "@/components/ui/Spinner";
 import type { AgentInfo } from "@/types";
 
-// Connect/picker (agent-panel spec §7): list supported harnesses with
-// detected/install state, à la Athas/Zed. Selecting a detected harness is what
-// will start an ACP session (wired in the ACP slice).
+// Lists the supported coding harnesses with detected/install state; picking a
+// detected one starts an ACP session.
 export function AgentPicker({ onPick }: { onPick: (agent: AgentInfo) => void }) {
   const { data: agents, isLoading } = useAgents();
 

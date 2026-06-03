@@ -92,7 +92,7 @@ export function useScopeGraph(scope: Scope) {
 // Lazy per-cluster resources — fetched only when `enabled` (cluster expanded / opened).
 // `focused` (the open detail view) polls fast (5s while a deployment is in progress,
 // else 10s); background observers (the tree) idle at 60s. Shared key → the query polls
-// at the shortest active observer's cadence (spec §12.3).
+// at the shortest active observer's cadence.
 export function useClusterResources(scope: Scope, cluster: string, enabled = true, focused = false) {
   return useQuery({
     queryKey: qk.clusterResources(scope, cluster),

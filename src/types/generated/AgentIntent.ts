@@ -4,7 +4,7 @@ import type { ProposedAction } from "./ProposedAction";
 
 /**
  * A UI effect the agent asked for, carried to the shell on the intent channel
- * (spec §5.1, §6). `navigate` opens/focuses a tab; `propose` opens the existing
+ *. `navigate` opens/focuses a tab; `propose` opens the existing
  * prefilled diff+confirm dialog. Neither touches AWS — only the human's confirm
  * click does.
  */

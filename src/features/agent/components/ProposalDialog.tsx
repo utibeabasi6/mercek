@@ -7,7 +7,7 @@ import { appErrorMessage } from "@/lib/errors";
 import { taskDefShort } from "@/lib/arn";
 import type { AppError, ProposedAction } from "@/types";
 
-// The write handoff (agent-panel spec §5.1): a ProposedAction from the agent opens
+// The write handoff: a ProposedAction from the agent opens
 // the SAME diff+confirm dialog the UI uses, prefilled but unconfirmed. The mutation
 // only fires when the human clicks confirm — the agent never executes it.
 export function ProposalDialog({

@@ -7,10 +7,13 @@ use aws_sdk_ecs::Client;
 use aws_smithy_types::error::metadata::ProvideErrorMetadata;
 
 use crate::domain::{
-    CapacityProvider, Cluster, ContainerInstance, Scope, Service, Task, TaskDefinition,
+    CapacityProvider, Cluster, ContainerInstance, Service, Task, TaskDefinition,
 };
 use crate::error::{AppError, AppResult};
 use crate::resources::ecs::map;
+
+#[cfg(feature = "mock")]
+use crate::domain::Scope;
 
 #[async_trait]
 pub trait EcsApi: Send + Sync {
@@ -331,10 +334,12 @@ impl EcsApi for SdkEcs {
     }
 }
 
+#[cfg(feature = "mock")]
 pub struct MockEcs {
     graph: crate::domain::ResourceGraph,
 }
 
+#[cfg(feature = "mock")]
 impl MockEcs {
     pub fn new(scope: &Scope) -> Self {
         Self { graph: crate::mock::discover(scope) }
@@ -345,6 +350,7 @@ impl MockEcs {
     }
 }
 
+#[cfg(feature = "mock")]
 #[async_trait]
 impl EcsApi for MockEcs {
     async fn list_clusters(&self) -> AppResult<Vec<String>> {

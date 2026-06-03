@@ -1,6 +1,6 @@
 import { AgentPanel } from "@/features/agent/components/AgentPanel";
 
-// The reserved agent surface (spec §11.6), now lit up. Width + visibility are
+// The reserved agent surface, now lit up. Width + visibility are
 // owned by AppShell (mirrors the Drawer); this just renders the panel at the
 // given width when open.
 export function RightPanel({ open, width }: { open: boolean; width: number }) {

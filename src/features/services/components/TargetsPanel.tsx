@@ -1,15 +1,30 @@
 import { useTargetHealth } from "@/features/services/api";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Section } from "@/components/ui/Tabs";
+import { InvestigateButton } from "@/features/agent/components/InvestigateButton";
 import { toneFor } from "@/lib/status";
 import { arnName } from "@/lib/arn";
 import type { LoadBalancerRef, Scope, Service } from "@/types";
 
-function TargetGroup({ scope, lb }: { scope: Scope; lb: LoadBalancerRef }) {
+function TargetGroup({ scope, svc, lb }: { scope: Scope; svc: Service; lb: LoadBalancerRef }) {
   const tgArn = lb.targetGroupArn ?? undefined;
   const { data, isLoading } = useTargetHealth(scope, tgArn);
+  const unhealthy = (data ?? []).filter((t) => t.state !== "healthy");
   return (
     <Section title={`${tgArn ? arnName(tgArn) : "target group"} · ${lb.containerName}:${lb.containerPort}`}>
+      {unhealthy.length > 0 && (
+        <div className="mb-2">
+          <InvestigateButton
+            label={`investigate ${unhealthy.length} unhealthy`}
+            title="diagnose why these targets are failing health checks"
+            message={`Investigate why ${unhealthy.length} target(s) in target group ${
+              tgArn ? arnName(tgArn) : ""
+            } for service ${svc.name} in cluster ${svc.cluster} are unhealthy (states: ${unhealthy
+              .map((t) => `${t.targetId}=${t.state}${t.reason ? `/${t.reason}` : ""}`)
+              .join(", ")}). Correlate with the service's tasks (health, exit codes), its events, the container's health check, and recent logs; tell me the root cause and a fix.`}
+          />
+        </div>
+      )}
       {isLoading ? (
         <div className="text-fg-muted">loading…</div>
       ) : data && data.length > 0 ? (
@@ -52,7 +67,7 @@ export function TargetsPanel({ scope, service }: { scope: Scope; service: Servic
   return (
     <div className="flex flex-col gap-6">
       {lbs.map((lb) => (
-        <TargetGroup key={lb.targetGroupArn} scope={scope} lb={lb} />
+        <TargetGroup key={lb.targetGroupArn} scope={scope} svc={service} lb={lb} />
       ))}
     </div>
   );

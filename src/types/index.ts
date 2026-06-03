@@ -1,6 +1,7 @@
 // Re-exports of ts-rs generated types. Generated files live in ./generated and are never hand-edited.
 export type { AgentInfo } from "./generated/AgentInfo";
 export type { AgentIntent } from "./generated/AgentIntent";
+export type { AgentMode } from "./generated/AgentMode";
 export type { AgentSessionUpdate } from "./generated/AgentSessionUpdate";
 export type { AppError } from "./generated/AppError";
 export type { Attachment } from "./generated/Attachment";
@@ -16,6 +17,7 @@ export type { ClusterResources } from "./generated/ClusterResources";
 export type { ClusterServiceConnectDefaults } from "./generated/ClusterServiceConnectDefaults";
 export type { ClusterSettings } from "./generated/ClusterSettings";
 export type { ClusterStats } from "./generated/ClusterStats";
+export type { ConnectInfo } from "./generated/ConnectInfo";
 export type { Container } from "./generated/Container";
 export type { ContainerDef } from "./generated/ContainerDef";
 export type { ContainerDependency } from "./generated/ContainerDependency";

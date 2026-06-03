@@ -99,3 +99,31 @@ button:disabled {
     transform: rotate(360deg);
   }
 }
+
+/* Pulsing dots for the agent "thinking…" indicator. */
+@keyframes mercek-blink {
+  0%,
+  80%,
+  100% {
+    opacity: 0.2;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+
+/* One-shot accent flash on a tab the agent just navigated to. */
+@keyframes mercek-agent-flash {
+  0% {
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  65% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}

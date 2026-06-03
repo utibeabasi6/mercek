@@ -8,7 +8,7 @@ pub fn retry_config() -> RetryConfig {
 }
 
 /// Process-global record of the last time AWS throttled us, so the status bar can
-/// surface a throttle indicator (spec §6.4). Recorded by `classify` on a
+/// surface a throttle indicator. Recorded by `classify` on a
 /// `ThrottlingException`.
 static LAST_THROTTLE_SECS: AtomicU64 = AtomicU64::new(0);
 const THROTTLE_WINDOW_SECS: u64 = 8;

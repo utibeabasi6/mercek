@@ -2,7 +2,7 @@ import { tabId, type Tab } from "@/app/shell";
 import { arnName } from "@/lib/arn";
 import type { Cluster, Scope, Service, Task } from "@/types";
 
-// Optional deep-link target (agent-panel spec §6): land on a sub-tab and/or
+// Optional deep-link target: land on a sub-tab and/or
 // scroll to a specific element (e.g. a deployment id).
 export interface TabLink {
   section?: string;

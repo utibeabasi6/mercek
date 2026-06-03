@@ -14,6 +14,12 @@ edition = "2021"
 name = "mercek_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+[features]
+# Offline test seam (spec §13): mock AWS clients + mock harness + fixtures.
+# NOT enabled in the shipped app — the running binary always hits real AWS and a
+# real ACP harness. Tests run with `--features mock`.
+mock = []
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
@@ -40,4 +46,11 @@ aws-sdk-cloudwatch = "1"
 aws-sdk-cloudwatchlogs = "1"
 aws-sdk-ec2 = "1"
 redb = "2"
+# ACP client for the agent panel (spec: agent-panel.md). The harness connects over
+# ACP; the read-only ECS tools are served to it via an in-process MCP-over-ACP server.
+agent-client-protocol = { version = "0.13", features = ["unstable_mcp_over_acp"] }
+agent-client-protocol-rmcp = "0.13"
+# MCP tool server: bridged over ACP (no port) AND runnable as `mercek --mcp` over
+# stdio (the standard way harnesses like Claude Code load MCP servers — see Pencil).
+rmcp = { version = "1", features = ["server", "macros", "transport-io"] }
 

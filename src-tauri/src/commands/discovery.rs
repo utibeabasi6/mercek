@@ -2,19 +2,14 @@ use std::sync::Arc;
 
 use tauri::State;
 
-use crate::commands::profiles::use_mock;
 use crate::discovery::{cluster_resources as fetch_cluster_resources, discover_clusters};
 use crate::domain::{ClusterResources, ResourceGraph, ScopeDiscovery, Scope, TaskDefinition};
 use crate::error::AppResult;
-use crate::resources::ecs::{EcsApi, MockEcs};
+use crate::resources::ecs::EcsApi;
 use crate::state::AppState;
 
 async fn ecs_api(state: &AppState, scope: &Scope) -> AppResult<Arc<dyn EcsApi>> {
-    if use_mock() {
-        Ok(Arc::new(MockEcs::new(scope)))
-    } else {
-        Ok(state.pool.get(scope).await?.ecs.clone())
-    }
+    Ok(state.pool.get(scope).await?.ecs.clone())
 }
 
 async fn discover_one(state: &AppState, scope: Scope) -> AppResult<ResourceGraph> {

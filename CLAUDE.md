@@ -11,9 +11,10 @@ pnpm build              # frontend typecheck + bundle (tsc && vite build)
 pnpm gen:types          # regenerate src/types/generated from Rust (ts-rs)
 pnpm exec tsc --noEmit  # frontend typecheck only
 
-cargo build  --manifest-path src-tauri/Cargo.toml          # backend
+cargo build  --manifest-path src-tauri/Cargo.toml                    # backend (real AWS/harness only)
 cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets
-cargo test   --manifest-path src-tauri/Cargo.toml          # runs ts-rs export + unit tests
+cargo test   --manifest-path src-tauri/Cargo.toml --features mock    # full offline suite + ts-rs export
+cargo test   --manifest-path src-tauri/Cargo.toml                    # ts-rs export + non-mock unit tests
 ```
 
 ## Type bridge (ts-rs)
@@ -33,12 +34,14 @@ Structs use `#[serde(rename_all = "camelCase")]` → TS fields are camelCase; en
 - Data layer: typed `invoke` in `lib/tauri.ts`, TanStack Query keys in `lib/query-keys.ts`,
   refetch cadences in `lib/query-client.ts`.
 
-## Mock vs. real AWS
+## Mock seam (test-only)
 
-Set `MERCEK_MOCK=1` to serve mock profiles + a fixture ECS graph (`src-tauri/src/mock.rs`) with
-no AWS calls — used for dev/demo and the orchestrator test. Unset, the app reads `~/.aws`
-profiles and hits real AWS via the `(profile,region)` client pool. To see populated UI without
-credentials: `MERCEK_MOCK=1 pnpm tauri dev`.
+The shipped app has **no mocks**: it always reads `~/.aws` profiles, hits real AWS via the
+`(profile,region)` client pool, and connects a real ACP harness. The mock AWS clients
+(`resources/<svc>/client.rs` `Mock*`), the fixture graph (`src-tauri/src/mock.rs`), and the
+scripted agent (`agent/mock_session.rs`) are compiled **only** under the `mock` cargo feature —
+the spec §13 offline test seam. Run the offline suite with `cargo test --features mock`. There
+is no `MERCEK_MOCK` env switch anymore; the seam is a compile-time feature, not a runtime flag.
 
 ## Persistence: redb, not SQLite
 

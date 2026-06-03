@@ -5,6 +5,7 @@ pub mod db;
 pub mod discovery;
 pub mod domain;
 pub mod error;
+#[cfg(feature = "mock")]
 pub mod mock;
 pub mod resources;
 pub mod state;
@@ -16,6 +17,24 @@ use state::AppState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // `mercek --mcp`: run the read-only ECS tools as a stdio MCP server (no GUI).
+    // This is what a harness (e.g. Claude Code) spawns when `mercek` is registered
+    // in its MCP config. stdout is the JSON-RPC channel, so logs go to stderr only.
+    if std::env::args().skip(1).any(|a| a == "--mcp") {
+        tracing_subscriber::fmt()
+            .with_writer(std::io::stderr)
+            .with_env_filter(
+                tracing_subscriber::EnvFilter::try_from_default_env()
+                    .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("warn")),
+            )
+            .init();
+        let rt = tokio::runtime::Runtime::new().expect("tokio runtime for --mcp");
+        if let Err(e) = rt.block_on(agent::mcp::run_stdio_server()) {
+            eprintln!("mercek --mcp exited with error: {e}");
+        }
+        return;
+    }
+
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
@@ -32,15 +51,23 @@ pub fn run() {
                 .map_err(|e| format!("resolve app data dir: {e}"))?;
             std::fs::create_dir_all(&dir).ok();
             let store = db::Store::open(dir.join("mercek.redb")).map_err(|e| e.to_string())?;
-            app.manage(AppState::new(store));
+            let state = AppState::new(store);
+            // Listen for navigate/propose intents from the out-of-process MCP tools.
+            agent::ipc::serve(state.agent_intent_sink.clone());
+            app.manage(state);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             commands::agent::agent_list,
             commands::agent::agent_connect,
+            commands::agent::agent_set_mode,
             commands::agent::agent_prompt,
             commands::agent::agent_cancel,
             commands::agent::agent_disconnect,
+            commands::agent::agent_threads_list,
+            commands::agent::agent_thread_load,
+            commands::agent::agent_thread_save,
+            commands::agent::agent_thread_delete,
             commands::profiles::list_profiles,
             commands::profiles::get_scopes,
             commands::profiles::set_scopes,

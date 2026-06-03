@@ -1,9 +1,11 @@
 import { invoke as tauriInvoke, Channel } from "@tauri-apps/api/core";
+import type { ThreadItem, ThreadMeta } from "@/features/agent/thread";
 import type {
   AgentInfo,
   AgentIntent,
   AgentSessionUpdate,
   AwsProfile,
+  ConnectInfo,
   ClusterResources,
   EniDetail,
   EnvVar,
@@ -22,13 +24,26 @@ import type {
 
 type CommandMap = {
   agent_list: { args: void; result: AgentInfo[] };
-  agent_connect: { args: { agentId: string }; result: void };
+  agent_connect: { args: { agentId: string; model?: string }; result: ConnectInfo };
+  agent_set_mode: { args: { modeId: string }; result: void };
   agent_prompt: {
-    args: { text: string; updates: Channel<AgentSessionUpdate>; intents: Channel<AgentIntent> };
+    args: {
+      text: string;
+      context?: string;
+      updates: Channel<AgentSessionUpdate>;
+      intents: Channel<AgentIntent>;
+    };
     result: string;
   };
   agent_cancel: { args: void; result: void };
   agent_disconnect: { args: void; result: void };
+  agent_threads_list: { args: void; result: ThreadMeta[] };
+  agent_thread_load: { args: { id: string }; result: ThreadItem[] | null };
+  agent_thread_save: {
+    args: { id: string; title: string; createdAt: number; updatedAt: number; items: ThreadItem[] };
+    result: ThreadMeta[];
+  };
+  agent_thread_delete: { args: { id: string }; result: ThreadMeta[] };
   list_profiles: { args: void; result: AwsProfile[] };
   get_scopes: { args: void; result: Scope[] };
   set_scopes: { args: { scopes: Scope[] }; result: void };

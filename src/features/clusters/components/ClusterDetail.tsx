@@ -3,7 +3,9 @@ import type { Tab } from "@/app/shell";
 import { useClusterResources, useScopeGraph } from "@/features/discovery/api";
 import { SubTabs, Field, Section } from "@/components/ui/Tabs";
 import { StatusBadge, Count } from "@/components/ui/Badge";
+import { LoadingState, EmptyState } from "@/components/ui/StateView";
 import { ClusterMetrics } from "@/features/metrics/components/MetricsView";
+import { TopologyView } from "@/features/topology/TopologyView";
 import { RunTaskDialog } from "@/features/tasks/components/RunTaskDialog";
 import { shortAccount } from "@/lib/arn";
 
@@ -22,9 +24,8 @@ export function ClusterDetail({ tab }: { tab: Tab }) {
     if (tab.section) setSub(tab.section);
   }, [tab.section, tab.focusId]);
 
-  if (!graph || !cluster) {
-    return <div className="p-6 text-fg-muted">cluster {tab.label} not in current scope</div>;
-  }
+  if (!graph) return <LoadingState label="loading scope…" />;
+  if (!cluster) return <EmptyState label={`cluster ${tab.label} is not in this scope`} />;
 
   const services = resources?.services ?? [];
   const insightsOff = cluster.settings.containerInsights === "disabled";
@@ -33,18 +34,18 @@ export function ClusterDetail({ tab }: { tab: Tab }) {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex items-center gap-3 px-4 py-3">
-        <h2 className="text-fg">{cluster.name}</h2>
+      <header className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
+        <h2 className="min-w-0 truncate text-fg">{cluster.name}</h2>
         <StatusBadge status={cluster.status} />
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex shrink-0 items-center gap-3">
           <button
             type="button"
             onClick={() => setRunning(true)}
-            className="rounded border border-border px-2 py-1 text-fg-dim hover:border-border-strong hover:text-fg"
+            className="shrink-0 whitespace-nowrap rounded border border-border px-2 py-1 text-fg-dim hover:border-border-strong hover:text-fg"
           >
             run task
           </button>
-          <span className="text-[12px] text-fg-muted">
+          <span className="shrink-0 whitespace-nowrap text-[12px] text-fg-muted">
             {shortAccount(graph.accountId)} · {graph.scope.region}
           </span>
         </div>
@@ -58,12 +59,13 @@ export function ClusterDetail({ tab }: { tab: Tab }) {
         tabs={[
           { id: "overview", label: "overview" },
           { id: "metrics", label: "metrics" },
+          { id: "topology", label: "topology" },
         ]}
         active={sub}
         onChange={setSub}
       />
 
-      {sub === "overview" ? (
+      {sub === "overview" && (
         <div className="flex flex-col gap-6 overflow-auto p-4">
           <div className="flex gap-6">
             <Count label="services" value={cluster.stats.activeServices} />
@@ -181,8 +183,14 @@ export function ClusterDetail({ tab }: { tab: Tab }) {
             )}
           </Section>
         </div>
-      ) : (
-        <ClusterMetrics scope={graph.scope} cluster={cluster.name} />
+      )}
+
+      {sub === "metrics" && <ClusterMetrics scope={graph.scope} cluster={cluster.name} />}
+
+      {sub === "topology" && (
+        <div className="min-h-0 flex-1">
+          <TopologyView scope={graph.scope} cluster={cluster.name} />
+        </div>
       )}
     </div>
   );

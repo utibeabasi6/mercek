@@ -87,8 +87,10 @@ impl CloudwatchApi for SdkCloudwatch {
     }
 }
 
+#[cfg(feature = "mock")]
 pub struct MockCloudwatch;
 
+#[cfg(feature = "mock")]
 #[async_trait]
 impl CloudwatchApi for MockCloudwatch {
     async fn get_metric_data(

@@ -4,6 +4,7 @@ import {
   useContext,
   useMemo,
   useReducer,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -20,7 +21,7 @@ export interface Tab {
   clusterName?: string;
   serviceName?: string;
   taskArn?: string;
-  // Deep-link targets (agent-panel spec §6). Not part of `id`, so re-opening a
+  // Deep-link targets. Not part of `id`, so re-opening a
   // tab at a different section focuses the existing tab instead of duplicating.
   section?: string;
   focusId?: string;
@@ -42,7 +43,7 @@ function tabsReducer(state: TabsState, action: TabsAction): TabsState {
   switch (action.type) {
     case "open": {
       const exists = state.tabs.some((t) => t.id === action.tab.id);
-      // Re-opening an existing tab re-points its deep-link target (§6) so an
+      // Re-opening an existing tab re-points its deep-link target so an
       // agent "navigate" can move you to a different section of an open tab.
       return {
         tabs: exists
@@ -90,11 +91,21 @@ interface ShellCtx {
 
   agentOpen: boolean;
   toggleAgent: () => void;
+  // A message queued for the agent (e.g. from an Investigate button); the panel
+  // sends it once connected. Opens the panel.
+  agentRequest: string | null;
+  askAgent: (message: string) => void;
+  clearAgentRequest: () => void;
 
   paletteOpen: boolean;
   paletteMode: PaletteMode;
   openPalette: (mode: PaletteMode) => void;
   closePalette: () => void;
+
+  // The tab the agent most recently navigated to, flashed briefly so the user sees
+  // where it went. `seq` re-triggers the animation on repeat navigations.
+  agentFlash: { tabId: string; seq: number } | null;
+  flashAgentTab: (tabId: string) => void;
 }
 
 const ShellContext = createContext<ShellCtx | null>(null);
@@ -106,8 +117,18 @@ export function ShellProvider({ children }: { children: ReactNode }) {
   });
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [agentOpen, setAgentOpen] = useState(false);
+  const [agentRequest, setAgentRequest] = useState<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteMode, setPaletteMode] = useState<PaletteMode>("command");
+  const [agentFlash, setAgentFlash] = useState<{ tabId: string; seq: number } | null>(null);
+  const flashSeq = useRef(0);
+
+  // Flash a tab as agent-driven; auto-clears unless another flash superseded it.
+  const flashAgentTab = useCallback((tabId: string) => {
+    const seq = (flashSeq.current += 1);
+    setAgentFlash({ tabId, seq });
+    setTimeout(() => setAgentFlash((cur) => (cur?.seq === seq ? null : cur)), 2500);
+  }, []);
 
   const openTab = useCallback((tab: Tab) => dispatch({ type: "open", tab }), []);
   const closeTab = useCallback((id: string) => dispatch({ type: "close", id }), []);
@@ -132,6 +153,11 @@ export function ShellProvider({ children }: { children: ReactNode }) {
   const closePalette = useCallback(() => setPaletteOpen(false), []);
   const toggleDrawer = useCallback(() => setDrawerOpen((v) => !v), []);
   const toggleAgent = useCallback(() => setAgentOpen((v) => !v), []);
+  const askAgent = useCallback((message: string) => {
+    setAgentRequest(message);
+    setAgentOpen(true);
+  }, []);
+  const clearAgentRequest = useCallback(() => setAgentRequest(null), []);
 
   const activeTab = useMemo(
     () => tabs.find((t) => t.id === activeTabId) ?? null,
@@ -152,10 +178,15 @@ export function ShellProvider({ children }: { children: ReactNode }) {
       toggleDrawer,
       agentOpen,
       toggleAgent,
+      agentRequest,
+      askAgent,
+      clearAgentRequest,
       paletteOpen,
       paletteMode,
       openPalette,
       closePalette,
+      agentFlash,
+      flashAgentTab,
     }),
     [
       tabs,
@@ -170,10 +201,15 @@ export function ShellProvider({ children }: { children: ReactNode }) {
       toggleDrawer,
       agentOpen,
       toggleAgent,
+      agentRequest,
+      askAgent,
+      clearAgentRequest,
       paletteOpen,
       paletteMode,
       openPalette,
       closePalette,
+      agentFlash,
+      flashAgentTab,
     ],
   );
 

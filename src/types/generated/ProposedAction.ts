@@ -2,7 +2,7 @@
 import type { Scope } from "./Scope";
 
 /**
- * A draft mutation the agent surfaces for the human to confirm (spec §5.1).
+ * A draft mutation the agent surfaces for the human to confirm.
  * Non-executing: emitting one only opens the existing prefilled diff+confirm
  * dialog — the mutation fires when the human clicks confirm, never the agent.
  * The union is closed to shapes Mercek already has a safe confirm dialog for;

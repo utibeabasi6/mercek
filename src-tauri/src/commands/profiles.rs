@@ -5,17 +5,9 @@ use crate::domain::{AwsProfile, Scope};
 use crate::error::AppResult;
 use crate::state::AppState;
 
-pub fn use_mock() -> bool {
-    std::env::var("MERCEK_MOCK").is_ok()
-}
-
 #[tauri::command]
 pub fn list_profiles() -> AppResult<Vec<AwsProfile>> {
-    if use_mock() {
-        Ok(crate::mock::profiles())
-    } else {
-        Ok(profiles::discover_profiles())
-    }
+    Ok(profiles::discover_profiles())
 }
 
 #[tauri::command]

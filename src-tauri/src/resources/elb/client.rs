@@ -52,8 +52,10 @@ impl ElbApi for SdkElb {
     }
 }
 
+#[cfg(feature = "mock")]
 pub struct MockElb;
 
+#[cfg(feature = "mock")]
 #[async_trait]
 impl ElbApi for MockElb {
     async fn describe_target_health(&self, _target_group_arn: &str) -> AppResult<Vec<TargetHealth>> {

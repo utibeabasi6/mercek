@@ -6,6 +6,15 @@ All notable changes to Mercek are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-06-03
+
+### Fixed
+
+- Agent detection now resolves the login-shell `PATH`, so coding agents installed via
+  Homebrew, npm-global, nvm, or `~/.local/bin` (Claude Code, Codex, Gemini, …) are found
+  when Mercek is launched from the Dock — and the connected harness is spawned with that
+  `PATH` too.
+
 ## [0.1.0] - 2026-06-03
 
 First public release. macOS (Apple Silicon and Intel).
@@ -28,5 +37,6 @@ First public release. macOS (Apple Silicon and Intel).
 - Command palette and keyboard navigation.
 - Light and dark themes, with persisted table columns and CSV export.
 
-[Unreleased]: https://github.com/utibeabasi6/mercek/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/utibeabasi6/mercek/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/utibeabasi6/mercek/releases/tag/v0.1.1
 [0.1.0]: https://github.com/utibeabasi6/mercek/releases/tag/v0.1.0

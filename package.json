@@ -11,8 +11,8 @@
     "gen:types": "cargo test --manifest-path src-tauri/Cargo.toml export_bindings"
   },
   "dependencies": {
-    "@tanstack/react-query": "^5.100.14",
-    "@tanstack/react-router": "^1.170.10",
+    "@tanstack/react-query": "^5.101.0",
+    "@tanstack/react-router": "^1.170.11",
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/react-virtual": "^3.14.2",
     "@tauri-apps/api": "^2",

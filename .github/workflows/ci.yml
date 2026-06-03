@@ -20,7 +20,7 @@ jobs:
     name: Frontend (tsc + vite)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: pnpm/action-setup@v6
         with:
@@ -45,7 +45,7 @@ jobs:
     name: Backend (clippy + tests)
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: pnpm/action-setup@v6
         with:
@@ -97,7 +97,7 @@ jobs:
     name: Marketing site
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: pnpm/action-setup@v6
         with:

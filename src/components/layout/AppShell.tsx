@@ -13,8 +13,11 @@ import { CommandPalette, type PaletteCommand } from "@/components/ui/CommandPale
 import { ReauthBanner } from "@/features/profiles/components/ReauthBanner";
 import { DiscoveryBanner } from "@/features/discovery/components/DiscoveryBanner";
 import { RefreshButton } from "@/components/layout/RefreshButton";
-import { IconButton } from "@/components/ui/IconButton";
+import { NotificationsInbox } from "@/features/sentinel/components/NotificationsInbox";
+import { useSentinel } from "@/features/sentinel/useSentinel";
+import { IconButton, ICON_PX } from "@/components/ui/IconButton";
 import { SettingsDialog } from "@/features/settings/SettingsDialog";
+import { Bot, Boxes, Moon, Settings, Sun } from "lucide-react";
 
 function Titlebar({
   onSearch,
@@ -30,7 +33,9 @@ function Titlebar({
   const { theme, toggleTheme } = useTheme();
   return (
     <div className="flex h-10 items-center gap-2 border-b border-border bg-bg px-3">
-      <span className="text-fg-dim">◎ mercek</span>
+      <span className="flex items-center gap-1.5 text-fg-dim">
+        <Boxes size={15} /> Mercek
+      </span>
       <button
         type="button"
         onClick={onSearch}
@@ -38,33 +43,39 @@ function Titlebar({
       >
         search resources… <span className="float-right">{modLabel} P</span>
       </button>
+      <NotificationsInbox />
       <RefreshButton />
       <IconButton
         onClick={toggleTheme}
         className="group"
         title={`switch to ${theme === "dark" ? "light" : "dark"} theme`}
       >
-        <span className="group-hover:hidden">{theme === "dark" ? "☾" : "☀"}</span>
-        <span className="hidden group-hover:inline">{theme === "dark" ? "☀" : "☾"}</span>
+        {theme === "dark" ? (
+          <>
+            <Moon size={ICON_PX.md} className="group-hover:hidden" />
+            <Sun size={ICON_PX.md} className="hidden group-hover:block" />
+          </>
+        ) : (
+          <>
+            <Sun size={ICON_PX.md} className="group-hover:hidden" />
+            <Moon size={ICON_PX.md} className="hidden group-hover:block" />
+          </>
+        )}
       </IconButton>
-      <IconButton
-        onClick={onSettings}
-        title="settings"
-        className="duration-300 hover:rotate-90"
-      >
-        ⚙
+      <IconButton onClick={onSettings} title="settings" className="duration-300 hover:rotate-90">
+        <Settings />
       </IconButton>
       <button
         type="button"
         onClick={onToggleAgent}
         title={`${agentOpen ? "hide" : "show"} agent panel · ${modLabel} J`}
-        className={`rounded border px-2 py-0.5 ${
+        className={`flex items-center gap-1.5 rounded border px-2 py-0.5 ${
           agentOpen
             ? "border-accent text-accent"
             : "border-border text-fg-dim hover:border-border-strong hover:text-fg"
         }`}
       >
-        ◇ agent {modLabel} J
+        <Bot size={15} /> agent {modLabel} J
       </button>
     </div>
   );
@@ -82,6 +93,7 @@ export function AppShell() {
   } = useShell();
   const { theme, toggleTheme } = useTheme();
   const qc = useQueryClient();
+  useSentinel(); // watch the resource graph for drift / stalled / flapping / OOM
 
   const [railWidth, setRailWidth] = useState(() => {
     const stored = Number(localStorage.getItem("mercek.railWidth"));

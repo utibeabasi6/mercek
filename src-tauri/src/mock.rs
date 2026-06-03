@@ -203,6 +203,22 @@ fn cluster_specs() -> Vec<ClusterSpec> {
     ]
 }
 
+pub fn image_scan(repository: &str, reference: &str) -> ImageScan {
+    ImageScan {
+        repository: repository.into(),
+        reference: reference.into(),
+        registry_id: Some("111111111111".into()),
+        scan_status: Some("COMPLETE".into()),
+        critical: 1,
+        high: 3,
+        medium: 7,
+        low: 12,
+        informational: 2,
+        undefined: 0,
+        scanned_at: Some(T_OLD.into()),
+    }
+}
+
 pub fn target_health() -> Vec<TargetHealth> {
     (0..4)
         .map(|i| {

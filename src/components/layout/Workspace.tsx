@@ -9,7 +9,7 @@ import { Kbd } from "@/components/ui/Badge";
 function EmptyState() {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3 text-fg-muted">
-      <div className="text-fg-dim">mercek</div>
+      <div className="text-fg-dim">Mercek</div>
       <div className="flex flex-col items-center gap-1 text-[12px]">
         <div>Activate a profile in the left rail, then open a resource.</div>
         <div className="flex items-center gap-2">

@@ -37,14 +37,14 @@ pub enum ToolOutcome {
 pub fn parse_intent(tool: &str, args: &Value) -> AppResult<AgentIntent> {
     match tool {
         "navigate" => {
-            let intent = serde_json::from_value(normalize_scope(args.clone()))
+            let intent = serde_json::from_value(normalize_scope(camel_keys(args.clone())))
                 .map_err(|e| AppError::internal(format!("navigate args: {e}")))?;
             Ok(AgentIntent::Navigate { intent })
         }
         "propose_action" => {
             // The proposal may be the bare ProposedAction or wrapped as { proposal }.
             let raw = args.get("proposal").cloned().unwrap_or_else(|| args.clone());
-            let action = serde_json::from_value(normalize_scope(raw))
+            let action = serde_json::from_value(normalize_scope(camel_keys(raw)))
                 .map_err(|e| AppError::internal(format!("propose_action args: {e}")))?;
             Ok(AgentIntent::Propose { action })
         }
@@ -67,6 +67,36 @@ pub fn route(tool: &str, args: &Value) -> AppResult<ToolOutcome> {
 /// and sometimes flattens `profile`/`region` alongside the other args. Accept all
 /// three shapes so a read doesn't fail on a formatting quirk (which the agent then
 /// misreads as "the tools aren't connected").
+/// Agents often emit snake_case keys (`task_definition`, `desired_count`, `focus_id`)
+/// while the intent/proposal types are camelCase — serde would silently drop those.
+/// Rewrite the top-level object's keys to camelCase so they're not lost. (Shallow:
+/// the only nested object is `scope`, whose fields are already single words.)
+fn camel_keys(v: Value) -> Value {
+    let Value::Object(map) = v else { return v };
+    let mut out = serde_json::Map::with_capacity(map.len());
+    for (k, val) in map {
+        let camel = if k.contains('_') {
+            let mut s = String::with_capacity(k.len());
+            let mut up = false;
+            for c in k.chars() {
+                if c == '_' {
+                    up = true;
+                } else if up {
+                    s.extend(c.to_uppercase());
+                    up = false;
+                } else {
+                    s.push(c);
+                }
+            }
+            s
+        } else {
+            k
+        };
+        out.entry(camel).or_insert(val); // keep an existing camelCase key if both are present
+    }
+    Value::Object(out)
+}
+
 /// Some harnesses stringify the nested `scope` object; if so, parse it back so the
 /// intent's `scope` field deserializes (same quirk `scope_arg` handles for reads).
 fn normalize_scope(mut v: Value) -> Value {
@@ -252,6 +282,28 @@ mod tests {
         assert_eq!((s.profile.as_str(), s.region.as_str()), ("p", "r"));
         // Nothing usable → a guiding error.
         assert!(scope_arg(&json!({})).is_err());
+    }
+
+    #[test]
+    fn parses_snake_case_proposal() {
+        // Agent sent snake_case fields + a stringified scope — both must survive.
+        let args = json!({
+            "kind": "updateService",
+            "scope": "{\"profile\":\"p\",\"region\":\"r\"}",
+            "cluster": "c",
+            "service": "api",
+            "task_definition": "api:42",
+        });
+        let AgentIntent::Propose { action } = parse_intent("propose_action", &args).unwrap() else {
+            panic!("expected propose");
+        };
+        match action {
+            ProposedAction::UpdateService { task_definition, scope, .. } => {
+                assert_eq!(task_definition.as_deref(), Some("api:42"));
+                assert_eq!(scope.profile, "p");
+            }
+            _ => panic!("expected updateService"),
+        }
     }
 
     #[test]

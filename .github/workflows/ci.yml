@@ -1,0 +1,118 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancel superseded runs on the same ref.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Mercek requires a recent Rust (the pure-Rust redb swap depends on it).
+  RUST_TOOLCHAIN: stable
+
+jobs:
+  # Frontend typecheck + bundle. Cheap, runs on Linux.
+  frontend:
+    name: Frontend (tsc + vite)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck + build
+        # `pnpm build` is `tsc && vite build`, so this covers strict typecheck.
+        run: pnpm build
+
+  # Rust backend: clippy (real + mock) and the offline mock test suite. Runs on
+  # macOS because that's the only release target today and macOS ships the
+  # webview Tauri links against — no apt prerequisites to manage.
+  backend:
+    name: Backend (clippy + tests)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Cache cargo
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Install JS deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        # tauri's build script embeds `../dist`; produce it so the crate compiles.
+        run: pnpm build
+
+      - name: Clippy (shipped path)
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+
+      - name: Clippy (mock seam)
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --features mock -- -D warnings
+
+      - name: Test (offline mock suite)
+        # Also re-exports the ts-rs bindings into src/types/generated.
+        run: cargo test --manifest-path src-tauri/Cargo.toml --features mock
+
+      - name: Verify generated types are committed
+        # The test run regenerates the Rust->TS bridge; fail if it drifts from
+        # what's checked in (run `pnpm gen:types` locally and commit the result).
+        run: |
+          if ! git diff --exit-code -- src/types/generated; then
+            echo "::error::Generated TS types are out of date. Run 'pnpm gen:types' and commit src/types/generated."
+            exit 1
+          fi
+
+  # Marketing site (mercek-site/) — build check only.
+  site:
+    name: Marketing site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: mercek-site/pnpm-lock.yaml
+
+      - name: Install deps
+        working-directory: mercek-site
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        working-directory: mercek-site
+        run: pnpm build

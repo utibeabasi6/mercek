@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { useClusterResources, useGraphs } from "@/features/discovery/api";
 import { clusterTab, serviceTab, taskTab } from "@/features/discovery/tabs";
 import { useShell, tabId } from "@/app/shell";
@@ -49,8 +50,8 @@ function Row({
       }`}
       style={{ paddingLeft: depth * 12 + 8 }}
     >
-      <span className="w-3 shrink-0 text-center text-[10px] text-fg-muted">
-        {expandable ? (open ? "▾" : "▸") : ""}
+      <span className="flex w-3 shrink-0 justify-center text-fg-muted">
+        {expandable ? open ? <ChevronDown size={12} /> : <ChevronRight size={12} /> : null}
       </span>
       {glyph}
       <span className="truncate" title={label}>

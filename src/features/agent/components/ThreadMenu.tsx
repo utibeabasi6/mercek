@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { History, X } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import type { ThreadMeta } from "@/features/agent/thread";
 
@@ -30,7 +31,7 @@ export function ThreadMenu({
   return (
     <div ref={ref} className="relative shrink-0">
       <IconButton onClick={() => setOpen((o) => !o)} title="chat history" aria-label="chat history">
-        ☰
+        <History />
       </IconButton>
       {open && (
         <div className="absolute left-0 top-9 z-50 max-h-80 w-72 overflow-auto rounded border border-border bg-bg-elev py-1 shadow-lg">
@@ -66,7 +67,7 @@ export function ThreadMenu({
                   aria-label="delete chat"
                   className="shrink-0 text-fg-muted opacity-0 transition-opacity hover:text-err group-hover:opacity-100"
                 >
-                  ✕
+                  <X size={13} />
                 </button>
               </div>
             ))

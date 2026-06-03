@@ -79,6 +79,7 @@ pub fn run() {
             commands::discovery::task_definition,
             commands::discovery::list_task_definitions,
             commands::discovery::list_task_def_families,
+            commands::images::image_scan,
             commands::services::target_health,
             commands::services::scaling,
             commands::services::scale_service,

@@ -5,6 +5,7 @@ import { SubTabs, Field, Section } from "@/components/ui/Tabs";
 import { StatusBadge, Count } from "@/components/ui/Badge";
 import { LoadingState, EmptyState } from "@/components/ui/StateView";
 import { ClusterMetrics } from "@/features/metrics/components/MetricsView";
+import { ObservationsSection } from "@/features/sentinel/components/ObservationsSection";
 import { TopologyView } from "@/features/topology/TopologyView";
 import { RunTaskDialog } from "@/features/tasks/components/RunTaskDialog";
 import { shortAccount } from "@/lib/arn";
@@ -77,6 +78,8 @@ export function ClusterDetail({ tab }: { tab: Tab }) {
             />
             <Count label="container instances" value={cluster.stats.containerInstances} />
           </div>
+
+          <ObservationsSection scope={graph.scope} cluster={cluster.name} />
 
           <Section title="capacity providers">
             <div className="flex max-w-2xl flex-col">

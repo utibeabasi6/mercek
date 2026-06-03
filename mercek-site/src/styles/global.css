@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+/*
+  Mercek marketing tokens. Monospace identity, dark-default with a light toggle.
+  Colors are defined as raw CSS vars on :root (dark) and [data-theme="light"], then
+  mapped into Tailwind v4's @theme via var() so `bg-bg`, `text-fg`, `border-line`,
+  etc. resolve to the active theme.
+*/
+
+@theme {
+  --color-bg: var(--bg);
+  --color-elev: var(--elev);
+  --color-elev2: var(--elev2);
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-fg: var(--fg);
+  --color-dim: var(--dim);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-err: var(--err);
+
+  --font-mono: "Berkeley Mono", "JetBrains Mono", "SFMono-Regular", ui-monospace,
+    "Menlo", "Consolas", monospace;
+  --font-sans: var(--font-mono);
+
+  --radius-card: 10px;
+}
+
+:root {
+  color-scheme: dark;
+  --bg: #0a0b0d;
+  --elev: #101216;
+  --elev2: #15181d;
+  --line: #23272e;
+  --line-soft: #1a1d22;
+  --fg: #e7e9ec;
+  --dim: #a4a9b2;
+  --muted: #6a707a;
+  --accent: #6e9bff;
+  --accent-soft: #1a2440;
+  --ok: #3fb950;
+  --warn: #d9a23a;
+  --err: #f0604a;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #ffffff;
+  --elev: #f7f8fa;
+  --elev2: #eef0f3;
+  --line: #e2e5ea;
+  --line-soft: #edeff2;
+  --fg: #14171c;
+  --dim: #474c55;
+  --muted: #828891;
+  --accent: #2f5fe0;
+  --accent-soft: #eaf0ff;
+  --ok: #1f8f3a;
+  --warn: #9a6b14;
+  --err: #cc3b25;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-mono);
+  font-feature-settings: "ss01", "cv01";
+}
+
+/* Honor reduced-motion globally. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Subtle grid backdrop used behind the hero. */
+.grid-backdrop {
+  background-image: linear-gradient(var(--line-soft) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
+  background-size: 44px 44px;
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 35%, transparent 75%);
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 35%, transparent 75%);
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--bg);
+}

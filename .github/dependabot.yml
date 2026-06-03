@@ -1,0 +1,37 @@
+version: 2
+updates:
+  # Frontend (root) — pnpm is handled by the npm ecosystem.
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      frontend-minor:
+        update-types: [minor, patch]
+
+  # Marketing site.
+  - package-ecosystem: npm
+    directory: "/mercek-site"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      site-minor:
+        update-types: [minor, patch]
+
+  # Rust backend.
+  - package-ecosystem: cargo
+    directory: "/src-tauri"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      cargo-minor:
+        update-types: [minor, patch]
+
+  # GitHub Actions used by the workflows.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly

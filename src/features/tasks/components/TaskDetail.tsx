@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Tab } from "@/app/shell";
+import { useShell, type Tab } from "@/app/shell";
 import { useClusterResources, useTaskDefinition } from "@/features/discovery/api";
 import { useEni, useStopTask } from "@/features/tasks/api";
 import { RegisterDialog } from "@/features/tasks/components/RegisterDialog";
@@ -22,10 +22,15 @@ export function TaskDetail({ tab }: { tab: Tab }) {
     true,
   );
   const task = resources?.tasks.find((t) => t.arn === tab.taskArn) ?? null;
+  const { openDrawer } = useShell();
   const [sub, setSub] = useState(tab.section ?? "containers");
   useEffect(() => {
     if (tab.section) setSub(tab.section);
   }, [tab.section, tab.focusId]);
+  // The "logs" tab's tail lives in the bottom drawer — open it when selected.
+  useEffect(() => {
+    if (sub === "logs") openDrawer();
+  }, [sub, openDrawer]);
   const { data: taskDef } = useTaskDefinition(
     tab.scope,
     task?.taskDefArn,
@@ -314,7 +319,8 @@ export function TaskDetail({ tab }: { tab: Tab }) {
 
         {sub === "logs" && (
           <div className="text-fg-muted">
-            Live per-container log tail runs in the bottom drawer — toggle it with {modLabel} B.
+            Live per-container log tail is running in the bottom drawer below ({modLabel} B to
+            toggle).
           </div>
         )}
       </div>

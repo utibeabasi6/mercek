@@ -1,0 +1,452 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Nav from "../components/Nav.astro";
+import Footer from "../components/Footer.astro";
+import ScreenshotFrame from "../components/ScreenshotFrame.astro";
+
+const title = "Mercek — a desktop IDE for Amazon ECS";
+const description =
+  "Mercek is a desktop app for Amazon ECS. It uses your existing AWS credentials, works across all your accounts and regions, and never sends anything to a server.";
+
+// Alternating feature sections. Shipped features only (see FEATURES.md). Each has a
+// screenshot slot in public/screenshots/, wired via `src` on the ScreenshotFrame.
+const features = [
+  {
+    id: "discovery",
+    eyebrow: "Discovery",
+    title: "All your clusters in one window",
+    body: "Mercek reads the profiles in your ~/.aws config, including SSO, assume-role, and MFA setups. Pick the accounts and regions you want to work with and it lists their clusters, services, and tasks in a single tree. Accounts you don't pick are never read.",
+    points: [
+      "Works with the AWS credentials you already have",
+      "Browse several accounts and regions at the same time",
+      "Discovery runs in parallel and stays responsive on large setups",
+    ],
+    shot: { file: "discovery-tree.png", label: "The resource tree with two accounts and several regions expanded" },
+  },
+  {
+    id: "deployments",
+    eyebrow: "Deployments",
+    title: "Track a deploy, roll it back",
+    body: "Mercek shows the current rollout state, the deployment circuit breaker, and how many tasks have failed. If a deploy goes wrong, you can roll back to an earlier task definition from the same screen. You can also compare a service to the same one in another environment.",
+    points: [
+      "Live rollout state and circuit-breaker status",
+      "Roll back to a previous task definition",
+      "Compare a service across environments or regions",
+    ],
+    shot: { file: "deployments.png", label: "A service's Deployments tab during a rollout, with the rollback action visible" },
+  },
+  {
+    id: "metrics",
+    eyebrow: "Metrics",
+    title: "CPU, memory, and traffic",
+    body: "CPU and memory come from Container Insights, with a fallback to AWS/ECS metrics when Insights is turned off. For load-balanced services you also get request count, latency, and 5xx, on the same screen as the service.",
+    points: [
+      "Container Insights with an AWS/ECS fallback",
+      "Request count, latency, and 5xx for ALB services",
+      "Right on the service, no console hop",
+    ],
+    shot: { file: "metrics.png", label: "The Metrics tab: CPU, memory, and load-balancer charts" },
+  },
+  {
+    id: "sizing",
+    eyebrow: "Cost & sizing",
+    title: "What each service costs, and whether it's right-sized",
+    body: "Mercek estimates the monthly Fargate cost of a service from its requested CPU and memory and how many tasks it runs. It compares that against peak usage and tells you whether the service looks over- or under-provisioned.",
+    points: [
+      "Monthly Fargate cost estimate per service",
+      "Over- or under-provisioned verdict from peak usage",
+      "Spot vs on-demand accounted for",
+    ],
+    shot: { file: "sizing.png", label: "The Sizing tab: the Fargate cost estimate and right-sizing verdict" },
+  },
+  {
+    id: "inspect",
+    eyebrow: "Inspect",
+    title: "Logs and task details",
+    body: "Open a service to tail its latest task's CloudWatch logs in the bottom panel. You can also read a task's full environment, with secrets shown as ARNs instead of values, and its network details: the ENI, IP addresses, security groups, subnet, and VPC.",
+    points: [
+      "Tail logs for the latest task without leaving the app",
+      "Full environment with secrets masked to ARNs",
+      "ENI, IP addresses, security groups, subnet, and VPC",
+    ],
+    shot: { file: "logs-task.png", label: "The log drawer tailing a task, next to the task's environment and networking" },
+  },
+  {
+    id: "topology",
+    eyebrow: "Topology",
+    title: "An automatic dependency map",
+    body: "Mercek builds a dependency graph from data that's already in AWS. It maps the path from the internet through your load balancer to each service, and it infers links between services from the environment variables in their task definitions.",
+    points: [
+      "Internet to target group to service",
+      "Service links inferred from task-definition env vars",
+    ],
+    shot: { file: "topology.png", label: "The topology graph for a cluster" },
+  },
+];
+
+const capabilities = [
+  ["Command palette", "Open any cluster, service, or task from the keyboard with ⌘K."],
+  ["A diff before every write", "Scaling, deploys, and stops show what will change before they run."],
+  ["Target group health", "Healthy, unhealthy, and draining targets per service."],
+  ["Autoscaling", "Scalable targets, policies, and capacity providers in one place."],
+  ["Environment compare", "Diff a service against the same one in another account or region."],
+  ["Light and dark themes", "Saved table columns and CSV export come along too."],
+];
+
+const faqs = [
+  {
+    q: "Where do my AWS credentials go?",
+    a: "They stay on your machine. Mercek uses the same ~/.aws profiles and SSO sessions as the AWS CLI. There's no account to create and no server in between, and Mercek doesn't write your credentials or resolved secrets to disk.",
+  },
+  {
+    q: "Can it change my infrastructure?",
+    a: "Only when you ask, and only after you confirm. Reading is automatic. Any write, like scaling, deploying, stopping a task, or updating a service, shows you a diff first and waits for your approval.",
+  },
+  {
+    q: "What does the agent do, and is it safe?",
+    a: "You connect your own coding agent, such as Claude Code. It can read your ECS state, explain it, and open screens in the app. It cannot change anything in AWS. If it suggests a change, that change opens the same diff dialog you'd use by hand, so you decide whether to apply it.",
+  },
+  {
+    q: "Does Mercek phone home?",
+    a: "No. It has no telemetry and no analytics. The only thing it connects to is AWS.",
+  },
+  {
+    q: "Which platforms are supported?",
+    a: "macOS for now. Linux and Windows are planned.",
+  },
+];
+
+const faqLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faqs.map((f) => ({
+    "@type": "Question",
+    name: f.q,
+    acceptedAnswer: { "@type": "Answer", text: f.a },
+  })),
+};
+---
+
+<Layout title={title} description={description} path="/" jsonLd={[faqLd]}>
+  <Nav />
+
+  {/* ───────────────────────── Hero ───────────────────────── */}
+  <section class="relative overflow-hidden border-b border-line">
+    <div class="grid-backdrop pointer-events-none absolute inset-0 opacity-60"></div>
+    <div class="relative mx-auto max-w-6xl px-4 pb-20 pt-16 sm:px-6 sm:pt-24">
+      <div class="mx-auto max-w-3xl text-center">
+        <a
+          href="#features"
+          class="inline-flex items-center gap-2 rounded-full border border-line bg-elev px-3 py-1 text-[12px] text-dim transition-colors hover:text-fg"
+        >
+          <span class="size-1.5 shrink-0 rounded-full bg-ok"></span>
+          <span id="hero-rotator" class="transition-opacity duration-300"
+            >Watches your services in the background</span
+          >
+        </a>
+        <h1 class="mt-6 text-balance text-4xl font-semibold leading-[1.1] tracking-tight sm:text-5xl">
+          A desktop IDE for Amazon ECS
+        </h1>
+        <p class="mx-auto mt-5 max-w-2xl text-pretty text-[15px] leading-relaxed text-dim sm:text-base">
+          Mercek is a desktop app for working with Amazon ECS. It uses the AWS
+          credentials already on your machine and shows your services across every
+          account and region. It talks to AWS directly and collects no telemetry.
+        </p>
+        <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <a
+            href="#install"
+            class="rounded-md bg-accent px-5 py-2.5 text-[14px] font-semibold text-bg transition-opacity hover:opacity-90"
+          >
+            Download for macOS
+          </a>
+          <a
+            href="#features"
+            class="rounded-md border border-line bg-elev px-5 py-2.5 text-[14px] font-medium text-fg transition-colors hover:border-dim"
+          >
+            See what it does
+          </a>
+        </div>
+        <p class="mt-4 text-[12px] text-muted">
+          Uses your existing ~/.aws profiles. Read-only until you approve a change.
+        </p>
+      </div>
+
+      <div class="relative mx-auto mt-14 max-w-4xl">
+        <ScreenshotFrame
+          src="/screenshots/hero.png"
+          file="hero.png"
+          ratio="aspect-[16/10]"
+          label="The main window: resource tree on the left, a service open on the right"
+        />
+      </div>
+    </div>
+  </section>
+
+  {/* ───────────────────── Integration strip ───────────────────── */}
+  <section class="border-b border-line bg-elev/40">
+    <div class="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+      <p class="text-center text-[12px] uppercase tracking-widest text-muted">
+        Talks to AWS directly. Nothing runs inside your account.
+      </p>
+      <div class="mt-6 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-[13px] text-dim">
+        {[
+          "ECS",
+          "Fargate",
+          "CloudWatch",
+          "ALB / target groups",
+          "Application Auto Scaling",
+          "ECR scans",
+          "IAM / STS identity",
+        ].map((s) => (
+          <span class="flex items-center gap-2">
+            <span class="size-1.5 rounded-full bg-accent/60"></span>
+            {s}
+          </span>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  {/* ───────────────────── Feature sections ───────────────────── */}
+  <div id="features">
+    {features.map((f, i) => (
+      <section id={f.id} class:list={["border-b border-line", i % 2 === 1 ? "bg-elev/30" : ""]}>
+        <div class="mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 sm:px-6 md:grid-cols-2 md:py-20">
+          <div class:list={[i % 2 === 1 ? "md:order-2" : ""]}>
+            <span class="text-[12px] uppercase tracking-widest text-accent">{f.eyebrow}</span>
+            <h2 class="mt-3 text-2xl font-semibold leading-tight tracking-tight sm:text-3xl">
+              {f.title}
+            </h2>
+            <p class="mt-4 text-[15px] leading-relaxed text-dim">{f.body}</p>
+            <ul class="mt-5 space-y-2.5">
+              {f.points.map((p) => (
+                <li class="flex items-start gap-2.5 text-[14px] text-dim">
+                  <span class="mt-1.5 size-1.5 shrink-0 rounded-full bg-accent"></span>
+                  <span>{p}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div class:list={[i % 2 === 1 ? "md:order-1" : ""]}>
+            <ScreenshotFrame src={`/screenshots/${f.shot.file}`} file={f.shot.file} label={f.shot.label} ratio="aspect-[4/3]" />
+          </div>
+        </div>
+      </section>
+    ))}
+  </div>
+
+  {/* ───────────────────────── Agent ───────────────────────── */}
+  <section id="agent" class="border-b border-line">
+    <div class="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
+      <div class="mx-auto max-w-2xl text-center">
+        <span class="text-[12px] uppercase tracking-widest text-accent">Agent panel</span>
+        <h2 class="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">
+          Connect your own coding agent
+        </h2>
+        <p class="mt-4 text-[15px] leading-relaxed text-dim">
+          You can connect a coding agent such as Claude Code through the Agent Client
+          Protocol. It can read your ECS state, explain what it finds, and open screens
+          in the app. It cannot change anything in AWS. If it suggests a change, Mercek
+          shows that change as a diff for you to approve.
+        </p>
+      </div>
+
+      <div class="mx-auto mt-12 grid max-w-5xl items-center gap-8 md:grid-cols-2">
+        <ScreenshotFrame
+          src="/screenshots/agent-panel.png"
+          file="agent-panel.png"
+          ratio="aspect-[4/3]"
+          label="The agent panel answering a question about why a service is unhealthy"
+        />
+        <ul class="grid gap-3 text-[14px] text-dim">
+          {[
+            ["Read-only to AWS", "It can describe and correlate your state, but never change it."],
+            ["Opens screens for you", "Ask it to show a service or task and it navigates there."],
+            ["Suggests, never applies", "A change becomes a diff plus the matching AWS CLI command."],
+            ["History stays local", "Chat threads are saved on your machine, not on a server."],
+          ].map((row) => (
+            <li class="rounded-lg border border-line bg-elev/40 p-3">
+              <div class="font-medium text-fg">{row[0]}</div>
+              <div class="mt-0.5 text-[13px] text-muted">{row[1]}</div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  {/* ───────────────────────── Sentinel ───────────────────────── */}
+  <section id="sentinel" class="border-b border-line bg-elev/30">
+    <div class="mx-auto max-w-3xl px-4 py-16 sm:px-6 md:py-24">
+          <span class="text-[12px] uppercase tracking-widest text-accent">Sentinel</span>
+          <h2 class="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">
+            A background watch on your services
+          </h2>
+          <p class="mt-4 text-[15px] leading-relaxed text-dim">
+            While Mercek is open, it checks your services in the background and raises an
+            observation when something looks off. You can hand any observation to the
+            agent to look into it. There's nothing to set up.
+          </p>
+          <div class="mt-6 grid gap-2.5 sm:grid-cols-2">
+            {[
+              ["Drift", "running count below desired"],
+              ["Stalled deploys", "a rollout stuck or failed"],
+              ["Flapping", "tasks restarting over and over"],
+              ["OOM kills", "a container exited with 137"],
+            ].map((d) => (
+              <div class="flex items-center gap-2 rounded-lg border border-line bg-bg px-3 py-2 text-[13px]">
+                <span class="size-1.5 rounded-full bg-warn"></span>
+                <span class="text-fg">{d[0]}</span>
+                <span class="text-muted">{d[1]}</span>
+              </div>
+            ))}
+          </div>
+    </div>
+  </section>
+
+  {/* ───────────────────── Capability grid ───────────────────── */}
+  <section class="border-b border-line">
+    <div class="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+      <div class="max-w-2xl">
+        <h2 class="text-2xl font-semibold tracking-tight sm:text-3xl">The rest of the day to day</h2>
+        <p class="mt-3 text-[15px] text-dim">Smaller things that keep you out of the AWS console.</p>
+      </div>
+      <div class="mt-10 grid gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-2 lg:grid-cols-3">
+        {capabilities.map((c) => (
+          <div class="bg-bg p-5">
+            <h3 class="text-[14px] font-semibold text-fg">{c[0]}</h3>
+            <p class="mt-1.5 text-[13px] leading-relaxed text-muted">{c[1]}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  {/* ───────────────────── Local-first / security ───────────────────── */}
+  <section id="security" class="border-b border-line bg-elev/30">
+    <div class="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
+      <div class="mx-auto max-w-2xl text-center">
+        <span class="text-[12px] uppercase tracking-widest text-accent">Local-first</span>
+        <h2 class="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">
+          Runs on your machine
+        </h2>
+        <p class="mt-4 text-[15px] leading-relaxed text-dim">
+          Mercek is a desktop app, not a hosted service. It connects to AWS from your
+          computer with credentials you already have, so there's no extra system that
+          needs access to your account.
+        </p>
+      </div>
+      <div class="mx-auto mt-10 grid max-w-4xl gap-4 sm:grid-cols-3">
+        {[
+          ["No server in between", "Mercek calls AWS from your machine. There's no backend that sees your data."],
+          ["No telemetry", "It has no analytics and doesn't phone home. It connects to AWS and nothing else."],
+          ["No stored secrets", "Credentials come from your existing chain. Resolved secrets show as ARNs and aren't written to disk."],
+        ].map((c) => (
+          <div class="rounded-xl border border-line bg-bg p-5">
+            <h3 class="text-[14px] font-semibold text-fg">{c[0]}</h3>
+            <p class="mt-2 text-[13px] leading-relaxed text-muted">{c[1]}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  {/* ───────────────────────── Install ───────────────────────── */}
+  <section id="install" class="border-b border-line">
+    <div class="mx-auto max-w-3xl px-4 py-20 text-center sm:px-6">
+      <h2 class="text-2xl font-semibold tracking-tight sm:text-3xl">Get Mercek</h2>
+      <p class="mx-auto mt-4 max-w-xl text-[15px] leading-relaxed text-dim">
+        Mercek runs on macOS, on both Apple Silicon and Intel. Download it, open it,
+        choose the AWS profiles you want, and your clusters show up.
+      </p>
+      <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+        <a
+          href="#"
+          class="rounded-md bg-accent px-6 py-3 text-[14px] font-semibold text-bg transition-opacity hover:opacity-90"
+        >
+          Download for macOS
+        </a>
+        <a
+          href="/docs"
+          class="rounded-md border border-line bg-elev px-6 py-3 text-[14px] font-medium text-fg transition-colors hover:border-dim"
+        >
+          Read the docs
+        </a>
+      </div>
+      <p class="mt-4 text-[12px] text-muted">Uses the AWS credentials already in your ~/.aws config.</p>
+      <p class="mt-2 text-[12px] text-muted">
+        Mercek is open source.
+        <a
+          href="https://github.com/utibeabasi6/mercek"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-accent hover:underline">View it on GitHub →</a
+        >
+      </p>
+
+      <div class="mx-auto mt-16 max-w-xl rounded-xl border border-line bg-elev/40 p-5 text-left">
+        <h3 class="text-[12px] uppercase tracking-widest text-muted">On the roadmap</h3>
+        <ul class="mt-3 space-y-2 text-[13px] text-dim">
+          {[
+            "ECS Exec: an interactive shell into a running task",
+            "Scheduled tasks and load-balancer routing in the topology map",
+            "Sentinel alerts outside the app, to desktop, Slack, or PagerDuty",
+            "Linux and Windows builds",
+          ].map((r) => (
+            <li class="flex items-start gap-2.5">
+              <span class="mt-1.5 size-1.5 shrink-0 rounded-full bg-muted"></span>
+              <span>{r}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  {/* ───────────────────────── FAQ ───────────────────────── */}
+  <section class="border-b border-line bg-elev/30">
+    <div class="mx-auto max-w-3xl px-4 py-16 sm:px-6">
+      <h2 class="text-center text-2xl font-semibold tracking-tight sm:text-3xl">Questions</h2>
+      <div class="mt-10 divide-y divide-line">
+        {faqs.map((f) => (
+          <details class="group py-4">
+            <summary class="flex cursor-pointer list-none items-center justify-between gap-4 text-[15px] font-medium text-fg">
+              {f.q}
+              <span class="text-muted transition-transform group-open:rotate-45">+</span>
+            </summary>
+            <p class="mt-3 text-[14px] leading-relaxed text-dim">{f.a}</p>
+          </details>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <Footer />
+
+  <script is:inline>
+    (function () {
+      var el = document.getElementById("hero-rotator");
+      if (!el) return;
+      var phrases = [
+        "Watches your services in the background",
+        "All your clusters in one window",
+        "Roll back a bad deploy in one click",
+        "Metrics and cost in one view",
+        "Tail task logs without leaving the app",
+        "An automatic dependency map",
+        "Image scan results next to each service",
+        "Connect your own read-only agent",
+        "Every change goes through a diff",
+      ];
+      var i = 0;
+      setInterval(function () {
+        el.style.opacity = "0";
+        setTimeout(function () {
+          i = (i + 1) % phrases.length;
+          el.textContent = phrases[i];
+          el.style.opacity = "1";
+        }, 320);
+      }, 3600);
+    })();
+  </script>
+</Layout>

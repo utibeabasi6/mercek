@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { RefreshCw } from "lucide-react";
 import { useShell } from "@/app/shell";
 import { useGraphs } from "@/features/discovery/api";
 import { invoke } from "@/lib/tauri";
@@ -42,8 +43,12 @@ export function StatusBar() {
           <Sep />
           <span>{pluralize(clusterCount, "cluster")}</span>
           <Sep />
-          <span className={isFetching ? "text-info" : cached ? "text-warn" : undefined}>
-            ⟳{" "}
+          <span
+            className={`inline-flex items-center gap-1 ${
+              isFetching ? "text-info" : cached ? "text-warn" : ""
+            }`}
+          >
+            <RefreshCw size={11} className={isFetching ? "animate-spin" : undefined} />
             {isFetching
               ? "refreshing"
               : cached

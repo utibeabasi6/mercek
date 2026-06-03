@@ -1,0 +1,61 @@
+# Mercek
+
+> Mercek is a local-first desktop IDE for Amazon ECS (Elastic Container Service).
+> It runs on your own machine, uses the AWS credentials already in your ~/.aws
+> config, and lets you discover, inspect, deploy, and debug ECS services across
+> multiple accounts and regions without opening the AWS console. There is no proxy
+> server, no account to create, and no telemetry. It is read-only to AWS by default;
+> every change is shown as a diff and requires explicit confirmation.
+
+## What it does (shipped)
+
+- Multi-account, multi-region discovery: reads ~/.aws profiles (SSO, assume-role,
+  MFA, static keys), activates the scopes you choose, and lists every cluster,
+  service, and task across them in one tree.
+- Service, cluster, and task detail: overview, deployments, events, tasks, target
+  health, autoscaling, metrics, right-sizing, environment, networking, containers.
+- Deployments and rollback: live rollout state, deployment circuit-breaker status,
+  failed-task counts, one-click rollback to a prior task definition, and cross-
+  environment / cross-region service comparison.
+- Logs: per-task CloudWatch Logs tail in a bottom drawer that resolves the latest
+  task automatically.
+- Metrics and cost: CPU, memory, ALB request/latency/5xx via Container Insights with
+  an AWS/ECS fallback; a Fargate cost estimate per task and service; a right-sizing
+  verdict from observed peak utilization.
+- Topology map: internet → target group → service routing, plus service-to-service
+  and service-to-infrastructure edges inferred from task-definition environment
+  variables.
+- Sentinel: a background watcher that flags drift (running != desired), stalled or
+  failed deployments, flapping tasks, and OOM kills (exit 137), surfaced in an inbox
+  and per-resource sections.
+- Agent panel: connect your own coding agent (such as Claude Code) over the Agent
+  Client Protocol. The agent is strictly read-only to AWS; it can read state, explain
+  it, and navigate the app, and any change it proposes opens a diff-and-confirm dialog
+  plus the equivalent AWS CLI command for a human to run. The agent never executes
+  writes. Chat history is stored locally.
+- Writes, always behind a diff: scale, update service, force new deployment, stop
+  task, run task, register a task-definition revision.
+- Keyboard-driven: a Command-K command palette.
+
+## Platforms
+
+- macOS today. Linux and Windows are planned.
+
+## Privacy and security
+
+- Local-first desktop app; no Mercek backend sits between you and AWS.
+- No telemetry or analytics.
+- Credentials use your existing AWS credential chain; resolved secrets are masked to
+  their ARNs and never written to disk.
+
+## Roadmap (not yet available)
+
+- ECS Exec interactive terminal into a running task.
+- EventBridge scheduled tasks and ALB listener/rule routing in the topology map.
+- Cost-spike detection and out-of-app sentinel alerting (desktop, Slack, PagerDuty).
+- Linux and Windows builds.
+
+## Links
+
+- Home: https://mercek.dev/
+- Docs: https://mercek.dev/docs

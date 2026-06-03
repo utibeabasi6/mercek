@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Sparkles } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useShell, type Tab } from "@/app/shell";
 import { useClusterResources } from "@/features/discovery/api";
@@ -45,6 +46,8 @@ import { RollbackDialog } from "@/features/services/components/RollbackDialog";
 import { CompareServiceDialog } from "@/features/services/components/CompareServiceDialog";
 import { ServiceMetrics } from "@/features/metrics/components/MetricsView";
 import { RightSizingPanel } from "@/features/metrics/components/RightSizingPanel";
+import { ObservationsSection } from "@/features/sentinel/components/ObservationsSection";
+import { ImageScansSection } from "@/features/images/components/ImageScansSection";
 import { toneFor } from "@/lib/status";
 import { relativeTime } from "@/lib/format";
 import { appErrorMessage } from "@/lib/errors";
@@ -223,6 +226,12 @@ export function ServiceDetail({ tab }: { tab: Tab }) {
                 tone={service.pending > 0 ? "warn" : undefined}
               />
             </div>
+            <ObservationsSection
+              scope={tab.scope}
+              cluster={service.cluster}
+              service={service.name}
+            />
+            <ImageScansSection scope={tab.scope} taskDefArn={service.taskDefArn} />
             <div className="flex flex-wrap gap-x-10 gap-y-4">
               <Field label="rollout">
                 <span className={deploying ? "text-warn" : "text-ok"}>
@@ -365,7 +374,7 @@ export function ServiceDetail({ tab }: { tab: Tab }) {
                   }}
                   className="shrink-0 self-start text-accent opacity-0 transition-opacity group-hover:opacity-100"
                 >
-                  ✨
+                  <Sparkles size={14} />
                 </button>
               </div>
             ))}

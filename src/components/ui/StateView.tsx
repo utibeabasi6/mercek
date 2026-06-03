@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { AlertTriangle, X } from "lucide-react";
 import { Spinner } from "@/components/ui/Spinner";
 
 // Consistent loading / empty / error surfaces, used across detail views, metrics,
@@ -32,7 +33,7 @@ export function ErrorState({
 }) {
   return (
     <div className="flex h-full min-h-24 flex-col items-center justify-center gap-3 p-6 text-center">
-      <span className="text-[18px] leading-none text-err">⚠</span>
+      <AlertTriangle size={18} className="text-err" />
       <div className="text-fg">{title}</div>
       {detail && <div className="max-w-md break-words text-[12px] text-fg-dim">{detail}</div>}
       {onRetry && (
@@ -52,7 +53,7 @@ export function ErrorState({
 export function ErrorBanner({ message, onDismiss }: { message: string; onDismiss?: () => void }) {
   return (
     <div className="flex items-start gap-2 rounded border border-err/40 bg-err/5 px-3 py-2 text-[12px] text-err">
-      <span className="shrink-0">⚠</span>
+      <AlertTriangle size={14} className="mt-0.5 shrink-0" />
       <span className="min-w-0 flex-1 break-words">{message}</span>
       {onDismiss && (
         <button
@@ -61,7 +62,7 @@ export function ErrorBanner({ message, onDismiss }: { message: string; onDismiss
           aria-label="dismiss"
           className="shrink-0 text-err/70 hover:text-err"
         >
-          ✕
+          <X size={14} />
         </button>
       )}
     </div>

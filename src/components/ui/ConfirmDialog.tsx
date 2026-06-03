@@ -6,6 +6,7 @@ export function ConfirmDialog({
   confirmLabel = "confirm",
   danger,
   busy,
+  confirmDisabled,
   errorMessage,
   onConfirm,
   onClose,
@@ -15,6 +16,7 @@ export function ConfirmDialog({
   confirmLabel?: string;
   danger?: boolean;
   busy?: boolean;
+  confirmDisabled?: boolean;
   errorMessage?: string;
   onConfirm: () => void;
   onClose: () => void;
@@ -44,7 +46,7 @@ export function ConfirmDialog({
             <button
               type="button"
               onClick={onConfirm}
-              disabled={busy}
+              disabled={busy || confirmDisabled}
               className={`rounded border px-3 py-1 text-bg disabled:cursor-not-allowed disabled:opacity-50 ${
                 danger ? "border-err bg-err" : "border-accent bg-accent"
               }`}

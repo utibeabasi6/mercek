@@ -1,0 +1,82 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Nav from "../components/Nav.astro";
+import Footer from "../components/Footer.astro";
+
+const title = "Docs — Mercek";
+const description =
+  "Get started with Mercek: connect your AWS profiles, activate scopes, and start working with your ECS clusters from the desktop.";
+
+const sections = [
+  {
+    id: "install",
+    h: "Install",
+    body: [
+      "Mercek is a native macOS app for Apple Silicon and Intel. Download it from the home page, move it to Applications, and open it.",
+      "It doesn't create an account or run a server. The first time you open it, it reads the AWS profiles already on your machine.",
+    ],
+  },
+  {
+    id: "credentials",
+    h: "How credentials work",
+    body: [
+      "Mercek uses your existing AWS credential chain. That's the same ~/.aws/config and ~/.aws/credentials the AWS CLI uses, so SSO, assume-role, MFA, and static keys all work.",
+      "Mercek never copies or stores your credentials. Resolved secrets from Secrets Manager or SSM are shown as ARNs in the UI and aren't written to disk.",
+    ],
+  },
+  {
+    id: "scopes",
+    h: "Activate scopes",
+    body: [
+      "A scope is a profile and region together. Mercek reads nothing from an account until you activate a scope for it, so you control what it touches.",
+      "Activate as many as you want. Mercek discovers the clusters, services, and tasks across all active scopes and shows them in one tree.",
+    ],
+  },
+  {
+    id: "reading",
+    h: "Read-only by default",
+    body: [
+      "Browsing, metrics, logs, and the topology map are all reads. None of them change your infrastructure.",
+      "Writes are explicit: scaling, forcing a deploy, stopping a task, updating a service, and rolling back. Each one shows a diff of what will change and waits for you to confirm.",
+    ],
+  },
+  {
+    id: "agent",
+    h: "Connecting an agent",
+    body: [
+      "The agent panel uses the Agent Client Protocol, so you can connect a coding agent such as Claude Code. The agent is read-only to AWS. It can read your ECS state and open screens in the app, but it can't change anything.",
+      "When the agent suggests a change, Mercek opens the same diff dialog you'd use by hand, with the matching AWS CLI command beside it. You decide whether to apply it.",
+    ],
+  },
+];
+---
+
+<Layout title={title} description={description} path="/docs">
+  <Nav />
+  <main class="mx-auto max-w-3xl px-4 py-16 sm:px-6">
+    <a href="/" class="text-[13px] text-accent">← back home</a>
+    <h1 class="mt-4 text-3xl font-semibold tracking-tight">Getting started</h1>
+    <p class="mt-3 text-[15px] leading-relaxed text-dim">
+      Mercek is a desktop app for Amazon ECS. There's no setup beyond the AWS
+      credentials you already have.
+    </p>
+
+    <nav class="mt-8 flex flex-wrap gap-x-4 gap-y-2 border-y border-line py-3 text-[13px]">
+      {sections.map((s) => (
+        <a href={`#${s.id}`} class="text-dim transition-colors hover:text-fg">{s.h}</a>
+      ))}
+    </nav>
+
+    <div class="mt-10 space-y-10">
+      {sections.map((s) => (
+        <section id={s.id} class="scroll-mt-20">
+          <h2 class="text-xl font-semibold tracking-tight">{s.h}</h2>
+          {s.body.map((p) => (
+            <p class="mt-3 text-[14px] leading-relaxed text-dim">{p}</p>
+          ))}
+        </section>
+      ))}
+    </div>
+  </main>
+  <Footer />
+</Layout>

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Trash2 } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { useRegisterRevision } from "@/features/tasks/api";
 import { Select } from "@/components/ui/Select";
@@ -257,7 +258,7 @@ function RowEditor({
             className="hover:!text-err"
             aria-label="remove"
           >
-            ✕
+            <Trash2 />
           </IconButton>
         </div>
       ))}

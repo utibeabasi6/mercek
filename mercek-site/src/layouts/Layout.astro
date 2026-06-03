@@ -1,0 +1,91 @@
+---
+import "../styles/global.css";
+
+interface Props {
+  title: string;
+  description: string;
+  /** Path-relative canonical, e.g. "/" or "/docs". */
+  path?: string;
+  /** Extra JSON-LD nodes to embed (objects, serialized verbatim). */
+  jsonLd?: Record<string, unknown>[];
+  ogType?: string;
+}
+
+const {
+  title,
+  description,
+  path = "/",
+  jsonLd = [],
+  ogType = "website",
+} = Astro.props;
+
+const site = Astro.site ?? new URL("https://mercek.dev");
+const canonical = new URL(path, site).href;
+const ogImage = new URL("/og.png", site).href;
+
+// Always-present structured data: the app itself.
+const softwareLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "Mercek",
+  applicationCategory: "DeveloperApplication",
+  operatingSystem: "macOS",
+  description:
+    "A local-first desktop IDE for Amazon ECS — discover, inspect, deploy, and debug services across accounts and regions from your own machine.",
+  url: site.href,
+  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+};
+
+const allLd = [softwareLd, ...jsonLd];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="canonical" href={canonical} />
+
+    <title>{title}</title>
+    <meta name="description" content={description} />
+
+    <meta property="og:type" content={ogType} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:site_name" content="Mercek" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+
+    <link rel="sitemap" href="/sitemap-index.xml" />
+
+    {/* No-flash theme: set data-theme before first paint from stored or system pref. */}
+    <script is:inline>
+      (function () {
+        try {
+          var stored = localStorage.getItem("mercek-theme");
+          var sysDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          var theme = stored || (sysDark ? "dark" : "light");
+          document.documentElement.setAttribute("data-theme", theme);
+        } catch (e) {
+          document.documentElement.setAttribute("data-theme", "dark");
+        }
+      })();
+    </script>
+
+    {allLd.map((node) => (
+      <script
+        type="application/ld+json"
+        is:inline
+        set:html={JSON.stringify(node)}
+      />
+    ))}
+  </head>
+  <body class="min-h-screen antialiased">
+    <slot />
+  </body>
+</html>

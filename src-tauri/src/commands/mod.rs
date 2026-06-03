@@ -1,5 +1,6 @@
 pub mod agent;
 pub mod discovery;
+pub mod images;
 pub mod logs;
 pub mod metrics;
 pub mod profiles;

@@ -9,6 +9,7 @@ import type {
   ClusterResources,
   EniDetail,
   EnvVar,
+  ImageScan,
   LogEvent,
   SecretRef,
   MetricSeries,
@@ -118,6 +119,10 @@ type CommandMap = {
   };
   stop_log_tail: { args: { tailId: number }; result: void };
   describe_eni: { args: { scope: Scope; eniId: string }; result: EniDetail };
+  image_scan: {
+    args: { scope: Scope; repository: string; reference: string };
+    result: ImageScan;
+  };
 };
 
 type Args<K extends keyof CommandMap> = CommandMap[K]["args"];

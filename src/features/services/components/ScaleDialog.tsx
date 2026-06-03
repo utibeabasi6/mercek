@@ -70,6 +70,15 @@ export function ScaleDialog({
             </span>
           </div>
 
+          <div>
+            <div className="mb-1 text-[10px] uppercase tracking-wide text-fg-muted">
+              run it manually
+            </div>
+            <code className="block whitespace-pre-wrap break-all rounded border border-border bg-bg-elev-2 p-2 font-mono text-[11px] text-fg-dim">
+              {`aws ecs update-service --cluster ${service.cluster} --service ${service.name} --desired-count ${desired} --profile ${scope.profile} --region ${scope.region}`}
+            </code>
+          </div>
+
           {scale.isError && (
             <div className="text-[12px] text-err">
               {appErrorMessage(scale.error as unknown as AppError)}

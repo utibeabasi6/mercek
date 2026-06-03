@@ -7,6 +7,7 @@ import { AgentPicker } from "@/features/agent/components/AgentPicker";
 import { ChatThread } from "@/features/agent/components/ChatThread";
 import { ThreadMenu } from "@/features/agent/components/ThreadMenu";
 import { IconButton } from "@/components/ui/IconButton";
+import { Bot, Plus, X } from "lucide-react";
 import { ProposalDialog } from "@/features/agent/components/ProposalDialog";
 import { ErrorBanner, LoadingState } from "@/components/ui/StateView";
 import type { AgentInfo } from "@/types";
@@ -66,13 +67,11 @@ export function AgentPanel() {
   return (
     <div className="flex h-full flex-col bg-bg">
       <div className="flex h-10 shrink-0 items-center gap-1.5 border-b border-border px-2">
-        <span className="shrink-0 text-fg-dim" title={agent?.name ?? "agent"}>
-          ◇
-        </span>
+        <Bot size={16} className="shrink-0 text-fg-dim" aria-label={agent?.name ?? "agent"} />
         {session.connected ? (
           <>
             <IconButton onClick={() => void session.newChat()} title="new chat" aria-label="new chat">
-              ＋
+              <Plus />
             </IconButton>
             <ThreadMenu
               threads={session.threads}
@@ -98,7 +97,7 @@ export function AgentPanel() {
             </button>
           )}
           <IconButton onClick={toggleAgent} aria-label="close agent panel" title={`close · ${modLabel} J`}>
-            ✕
+            <X />
           </IconButton>
         </div>
       </div>

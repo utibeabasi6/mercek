@@ -14,8 +14,14 @@ edition = "2021"
 name = "mercek_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+# Title-case binary so the macOS dock / app name reads "Mercek" (not the
+# lowercase crate name) when running. Kept in sync with mainBinaryName.
+[[bin]]
+name = "Mercek"
+path = "src/main.rs"
+
 [features]
-# Offline test seam (spec §13): mock AWS clients + mock harness + fixtures.
+# Offline test seam: mock AWS clients + mock harness + fixtures.
 # NOT enabled in the shipped app — the running binary always hits real AWS and a
 # real ACP harness. Tests run with `--features mock`.
 mock = []
@@ -39,6 +45,7 @@ futures = "0.3"
 aws-config = { version = "1", features = ["behavior-version-latest"] }
 aws-smithy-types = { version = "1", features = ["serde-serialize"] }
 aws-sdk-ecs = "1"
+aws-sdk-ecr = "1"
 aws-sdk-sts = "1"
 aws-sdk-elasticloadbalancingv2 = "1"
 aws-sdk-applicationautoscaling = "1"

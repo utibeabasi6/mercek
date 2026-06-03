@@ -4,6 +4,7 @@ import { createChannel, invoke } from "@/lib/tauri";
 import { qk } from "@/lib/query-keys";
 import { tabId, useShell, type Tab } from "@/app/shell";
 import { appErrorMessage } from "@/lib/errors";
+import { arnName } from "@/lib/arn";
 import {
   deleteThread as removeStoredThread,
   loadThreadItems,
@@ -66,6 +67,21 @@ function tabFromNavigate(n: NavigateIntent): Tab | null {
       ...link,
     };
   }
+  if (n.target === "task") {
+    // `key` is the task ARN: arn:…:task/<cluster>/<taskId> — the cluster is in it.
+    const cluster = /:task\/([^/]+)\//.exec(n.key)?.[1];
+    if (!cluster) return null;
+    return {
+      id: tabId("task", n.scope, n.key),
+      kind: "task",
+      scope: n.scope,
+      label: arnName(n.key).slice(0, 12),
+      sublabel: cluster,
+      clusterName: cluster,
+      taskArn: n.key,
+      ...link,
+    };
+  }
   return null;
 }
 
@@ -92,7 +108,7 @@ function viewContext(tab: Tab | null): string | undefined {
 // ProposedAction for the panel to confirm. The conversation bypasses TanStack
 // Query and feeds component state via channels.
 export function useAgentSession() {
-  const { openTab, activeTab, flashAgentTab } = useShell();
+  const { openTab, activeTab, flashAgentTab, openDrawer } = useShell();
   const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -212,12 +228,14 @@ export function useAgentSession() {
         if (t) {
           openTab(t);
           flashAgentTab(t.id); // briefly highlight the tab the agent drove us to
+          // Logs live in the bottom drawer (it auto-picks the latest task).
+          if (i.intent.section === "logs") openDrawer();
         }
       } else if (i.type === "propose") {
         setProposal(i.action);
       }
     },
-    [openTab, flashAgentTab],
+    [openTab, flashAgentTab, openDrawer],
   );
 
   const send = useCallback(

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { X } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { useClusterResources, useGraphs, useTaskDefinition } from "@/features/discovery/api";
 import { Select } from "@/components/ui/Select";
@@ -67,7 +68,7 @@ export function CompareServiceDialog({
             compare <span className="text-accent">{service.name}</span>
           </span>
           <IconButton onClick={onClose} aria-label="close" className="ml-auto">
-            ✕
+            <X />
           </IconButton>
         </div>
 

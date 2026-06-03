@@ -1,4 +1,5 @@
 import { useAgents } from "@/features/agent/api";
+import { X } from "lucide-react";
 import { Select } from "@/components/ui/Select";
 import { IconButton } from "@/components/ui/IconButton";
 import { PREF, setPref, usePref } from "@/lib/prefs";
@@ -30,7 +31,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
         <div className="flex items-center border-b border-border px-4 py-2.5">
           <span className="text-fg">settings</span>
           <IconButton onClick={onClose} aria-label="close settings" className="ml-auto">
-            ✕
+            <X />
           </IconButton>
         </div>
 

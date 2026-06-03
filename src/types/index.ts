@@ -4,6 +4,7 @@ export type { AgentIntent } from "./generated/AgentIntent";
 export type { AgentMode } from "./generated/AgentMode";
 export type { AgentSessionUpdate } from "./generated/AgentSessionUpdate";
 export type { AppError } from "./generated/AppError";
+export type { ImageScan } from "./generated/ImageScan";
 export type { Attachment } from "./generated/Attachment";
 export type { Attribute } from "./generated/Attribute";
 export type { AutoScalingGroupProvider } from "./generated/AutoScalingGroupProvider";

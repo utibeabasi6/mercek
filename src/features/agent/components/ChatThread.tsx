@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Spinner } from "@/components/ui/Spinner";
 import { Select } from "@/components/ui/Select";
+import { Wrench } from "lucide-react";
 import { ErrorBanner } from "@/components/ui/StateView";
 import { Markdown } from "@/components/ui/Markdown";
 import type { ThreadItem } from "@/features/agent/api";
@@ -74,7 +75,7 @@ function UpdateRow({ u }: { u: AgentSessionUpdate }) {
       const name = ecsToolName(u.tool) ?? u.tool;
       return (
         <div className="my-1 flex min-w-0 items-center gap-1.5 overflow-hidden rounded border border-border bg-bg-elev px-2 py-1 text-[12px]">
-          <span className="shrink-0 text-fg-muted">⚙</span>
+          <Wrench size={13} className="shrink-0 text-fg-muted" />
           <span className="shrink truncate font-medium text-accent" title={u.tool}>
             {name}
           </span>

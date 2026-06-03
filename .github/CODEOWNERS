@@ -1,0 +1,3 @@
+# Default owner for everything in the repo. GitHub auto-requests review from
+# these owners on any PR that touches matching paths.
+* @utibeabasi6

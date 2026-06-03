@@ -22,7 +22,9 @@ export function Select({
   placeholder?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [dropUp, setDropUp] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
   const selected = options.find((o) => o.value === value);
 
   useEffect(() => {
@@ -36,7 +38,13 @@ export function Select({
 
   const toggle = () => {
     setOpen((o) => {
-      if (!o) onOpen?.();
+      if (!o) {
+        onOpen?.();
+        // Flip the menu upward when there isn't room below (e.g. the agent panel's
+        // mode selector sits at the bottom edge) so it isn't clipped.
+        const rect = btnRef.current?.getBoundingClientRect();
+        if (rect) setDropUp(window.innerHeight - rect.bottom < 240);
+      }
       return !o;
     });
   };
@@ -44,6 +52,7 @@ export function Select({
   return (
     <div ref={ref} className="relative min-w-0 flex-1">
       <button
+        ref={btnRef}
         type="button"
         onClick={toggle}
         className="flex w-full items-center gap-2 rounded border border-border bg-bg-elev-2 px-2 py-1 text-left text-fg outline-none hover:border-border-strong"
@@ -55,7 +64,11 @@ export function Select({
         <span className="shrink-0 text-[10px] text-fg-muted">▾</span>
       </button>
       {open && (
-        <div className="absolute inset-x-0 z-10 mt-1 max-h-48 overflow-auto rounded border border-border-strong bg-bg-elev py-1 shadow-2xl">
+        <div
+          className={`absolute inset-x-0 z-20 max-h-48 overflow-auto rounded border border-border-strong bg-bg-elev py-1 shadow-2xl ${
+            dropUp ? "bottom-full mb-1" : "top-full mt-1"
+          }`}
+        >
           {loading && options.length === 0 ? (
             <div className="flex items-center gap-2 px-2 py-1.5 text-fg-muted">
               <Spinner className="size-3" /> loading…

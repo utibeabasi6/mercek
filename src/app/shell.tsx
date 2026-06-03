@@ -88,6 +88,7 @@ interface ShellCtx {
 
   drawerOpen: boolean;
   toggleDrawer: () => void;
+  openDrawer: () => void;
 
   agentOpen: boolean;
   toggleAgent: () => void;
@@ -152,6 +153,7 @@ export function ShellProvider({ children }: { children: ReactNode }) {
   }, []);
   const closePalette = useCallback(() => setPaletteOpen(false), []);
   const toggleDrawer = useCallback(() => setDrawerOpen((v) => !v), []);
+  const openDrawer = useCallback(() => setDrawerOpen(true), []);
   const toggleAgent = useCallback(() => setAgentOpen((v) => !v), []);
   const askAgent = useCallback((message: string) => {
     setAgentRequest(message);
@@ -176,6 +178,7 @@ export function ShellProvider({ children }: { children: ReactNode }) {
       closeActiveTab,
       drawerOpen,
       toggleDrawer,
+      openDrawer,
       agentOpen,
       toggleAgent,
       agentRequest,
@@ -199,6 +202,7 @@ export function ShellProvider({ children }: { children: ReactNode }) {
       closeActiveTab,
       drawerOpen,
       toggleDrawer,
+      openDrawer,
       agentOpen,
       toggleAgent,
       agentRequest,

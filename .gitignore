@@ -23,3 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 specs
+
+# throwaway AWS demo infra for screenshots (billable; teardown via demo-aws/teardown.sh)
+demo-aws/.env

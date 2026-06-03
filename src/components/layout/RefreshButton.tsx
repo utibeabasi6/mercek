@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useGraphs } from "@/features/discovery/api";
 import { qk } from "@/lib/query-keys";
+import { RefreshCw } from "lucide-react";
 import { Spinner } from "@/components/ui/Spinner";
 import { IconButton } from "@/components/ui/IconButton";
 
@@ -19,9 +20,7 @@ export function RefreshButton() {
       {isFetching ? (
         <Spinner className="size-5" />
       ) : (
-        <span className="inline-block transition-transform duration-300 group-hover:rotate-180">
-          ⟳
-        </span>
+        <RefreshCw className="transition-transform duration-300 group-hover:rotate-180" />
       )}
     </IconButton>
   );

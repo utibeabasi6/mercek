@@ -9,6 +9,7 @@ use crate::error::AppResult;
 use crate::resources::autoscaling::{AutoscalingApi, SdkAutoscaling};
 use crate::resources::cloudwatch::{CloudwatchApi, SdkCloudwatch};
 use crate::resources::ec2::{Ec2Api, SdkEc2};
+use crate::resources::ecr::{EcrApi, SdkEcr};
 use crate::resources::ecs::{EcsApi, SdkEcs};
 use crate::resources::elb::{ElbApi, SdkElb};
 use crate::resources::logs::{LogsApi, SdkLogs};
@@ -22,6 +23,7 @@ pub struct ScopeClients {
     pub cloudwatch: Arc<dyn CloudwatchApi>,
     pub logs: Arc<dyn LogsApi>,
     pub ec2: Arc<dyn Ec2Api>,
+    pub ecr: Arc<dyn EcrApi>,
     pub account_id: Option<String>,
 }
 
@@ -61,6 +63,7 @@ impl ClientPool {
                 scope.profile.clone(),
             )),
             ec2: Arc::new(SdkEc2::new(aws_sdk_ec2::Client::new(&config), scope.profile.clone())),
+            ecr: Arc::new(SdkEcr::new(aws_sdk_ecr::Client::new(&config), scope.profile.clone())),
             account_id,
         });
         self.cache.lock().await.insert(scope.clone(), clients.clone());

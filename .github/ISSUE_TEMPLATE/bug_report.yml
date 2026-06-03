@@ -1,0 +1,61 @@
+name: Bug report
+description: Report something that's broken
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug. Please fill out the form so we can reproduce it.
+
+        **Do not paste AWS account IDs, ARNs, credentials, or other secrets.**
+        Redact anything sensitive — Mercek never needs it to debug a UI issue.
+  - type: input
+    id: version
+    attributes:
+      label: Mercek version
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: macOS version & chip
+      placeholder: "macOS 14.5, Apple M2"
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: What did you do, in order?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include any error text (with secrets redacted).
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Discovery / resource tree
+        - Service / task detail
+        - Deployments / rollback
+        - Metrics / cost
+        - Logs
+        - Topology
+        - Sentinel
+        - Agent panel
+        - Other / not sure
+    validations:
+      required: false

@@ -63,8 +63,8 @@ one of:
 - **System Settings → Privacy & Security** → scroll to *"Mercek was blocked"* → **Open Anyway**.
 
 This is a stopgap, not the plan: it works at the OS level today but makes a poor first
-impression and Apple keeps tightening it. Signing + notarization (see
-[RELEASING.md](./RELEASING.md)) is the real fix and will remove the warning.
+impression and Apple keeps tightening it. Signing + notarization is the real fix and
+will remove the warning.
 
 ## Security model
 

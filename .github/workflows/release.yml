@@ -55,17 +55,22 @@ jobs:
         # install dependencies — do that first.
         run: pnpm install --frozen-lockfile
 
-      # Optional macOS signing. When APPLE_CERTIFICATE isn't configured,
-      # tauri-action produces an unsigned bundle (Gatekeeper warns on launch but
-      # the build still succeeds). Secrets can't be used directly in `if:`, so we
-      # gate inside the step.
-      - name: Set up macOS signing keychain
+      # Optional macOS signing + notarisation. Runs only when the secrets are set;
+      # otherwise the build is unsigned (Gatekeeper warns on launch but still builds).
+      # The signing/notarisation vars are forwarded to the build step via $GITHUB_ENV
+      # ONLY when configured — passing an empty APPLE_SIGNING_IDENTITY makes Tauri try
+      # to sign with identity "" and fail.
+      - name: Configure Apple signing (optional)
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          if [ -z "$APPLE_CERTIFICATE" ]; then
-            echo "APPLE_CERTIFICATE not set — building unsigned."
+          if [ -z "$APPLE_CERTIFICATE" ] || [ -z "$SIGNING_IDENTITY" ]; then
+            echo "Apple signing secrets not set — building unsigned."
             exit 0
           fi
           echo "$APPLE_CERTIFICATE" | base64 --decode > cert.p12
@@ -75,17 +80,21 @@ jobs:
           security import cert.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k actions build.keychain
           rm -f cert.p12
+          # Only now that signing is configured, expose the vars to the build step.
+          {
+            echo "APPLE_SIGNING_IDENTITY=$SIGNING_IDENTITY"
+            echo "APPLE_ID=$APPLE_ID"
+            echo "APPLE_PASSWORD=$APPLE_PASSWORD"
+            echo "APPLE_TEAM_ID=$APPLE_TEAM_ID"
+          } >> "$GITHUB_ENV"
+          echo "Apple signing configured."
 
       - name: Build and release
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # macOS code signing + notarisation. All optional — unset means an
-          # unsigned build. Add these as repository secrets to ship signed.
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # APPLE_* signing/notarisation vars are injected by the previous step via
+          # $GITHUB_ENV, and only when configured. Their absence here = unsigned build.
         with:
           # The Tauri project lives at the repo root (src-tauri/), so projectPath
           # defaults to "." — no need to set it.

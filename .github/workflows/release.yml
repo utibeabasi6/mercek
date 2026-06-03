@@ -13,20 +13,12 @@ on:
 
 jobs:
   build:
-    name: Build ${{ matrix.triple }}
+    name: Build (universal macOS)
     permissions:
       contents: write
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: macos-14
-            args: "--target aarch64-apple-darwin"
-            triple: aarch64-apple-darwin
-          - platform: macos-13
-            args: "--target x86_64-apple-darwin"
-            triple: x86_64-apple-darwin
-    runs-on: ${{ matrix.platform }}
+    # One Apple Silicon runner builds a universal2 binary (Intel + Apple Silicon),
+    # so there's no scarce/deprecated macos-13 (Intel) runner to wait on.
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
 
@@ -42,13 +34,13 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.triple }}
+          targets: aarch64-apple-darwin, x86_64-apple-darwin
 
       - name: Cache cargo
         uses: swatinem/rust-cache@v2
         with:
           workspaces: src-tauri -> target
-          key: ${{ matrix.triple }}
+          key: universal-apple-darwin
 
       - name: Install JS deps
         # tauri-action runs the beforeBuildCommand (`pnpm build`) but does not
@@ -107,4 +99,4 @@ jobs:
           # Tauri updater plugin, set TAURI_SIGNING_PRIVATE_KEY(/_PASSWORD)
           # secrets, and flip this to true.
           includeUpdaterJson: false
-          args: ${{ matrix.args }}
+          args: --target universal-apple-darwin

@@ -45,9 +45,26 @@ and dependencies without switching tabs and accounts.
 
 ## Install
 
-macOS (Apple silicon & Intel). Grab the latest `.dmg` from the
-[releases page](https://github.com/utibeabasi6/mercek/releases), or build from source
-below. Linux and Windows are on the roadmap.
+macOS (Apple Silicon & Intel). Download the latest `.dmg` from the
+[releases page](https://github.com/utibeabasi6/mercek/releases/latest), or build from
+source below. Linux and Windows are on the roadmap.
+
+### Opening it (unsigned build)
+
+Mercek isn't notarized by Apple yet, so on first launch macOS says *"Apple could not
+verify 'Mercek' is free of malware…"* — expected for an unsigned app. Open it with any
+one of:
+
+- **Terminal** — clear the quarantine flag, then launch normally:
+  ```bash
+  xattr -dr com.apple.quarantine /Applications/Mercek.app
+  ```
+- **Finder** — right-click (Control-click) `Mercek.app` → **Open** → **Open**.
+- **System Settings → Privacy & Security** → scroll to *"Mercek was blocked"* → **Open Anyway**.
+
+This is a stopgap, not the plan: it works at the OS level today but makes a poor first
+impression and Apple keeps tightening it. Signing + notarization (see
+[RELEASING.md](./RELEASING.md)) is the real fix and will remove the warning.
 
 ## Security model
 

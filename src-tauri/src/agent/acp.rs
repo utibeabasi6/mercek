@@ -108,15 +108,24 @@ impl SdkAcpSession {
             )));
         }
         let mut agent = AcpAgent::from_str(adapter.acp_command).map_err(acp_to_app)?;
-        // Inject the model preference as the harness's model env var, if we know it.
-        if let (Some(env_name), Some(model)) = (adapter.model_env, model.filter(|m| !m.is_empty())) {
-            if let McpServer::Stdio(mut stdio) = agent.into_server() {
-                stdio.env.push(EnvVariable::new(env_name, model));
+        // A Finder/Dock launch inherits a stripped PATH, so the harness binary (npx,
+        // claude, …) isn't found when the adapter is spawned. Run it with the user's
+        // login-shell PATH, and inject the model preference as the harness's model env
+        // var when we know it. (from_str always yields a Stdio transport for our
+        // command-line adapters; a non-stdio transport simply can't carry env.)
+        match agent.into_server() {
+            McpServer::Stdio(mut stdio) => {
+                stdio
+                    .env
+                    .push(EnvVariable::new("PATH", crate::agent::adapters::user_path_string()));
+                if let (Some(env_name), Some(m)) =
+                    (adapter.model_env, model.filter(|m| !m.is_empty()))
+                {
+                    stdio.env.push(EnvVariable::new(env_name, m));
+                }
                 agent = AcpAgent::new(McpServer::Stdio(stdio));
-            } else {
-                // Non-stdio transport can't carry env; fall back to the parsed agent.
-                agent = AcpAgent::from_str(adapter.acp_command).map_err(acp_to_app)?;
             }
+            other => agent = AcpAgent::new(other),
         }
         let (name, acp_cmd, hint) = (adapter.name, adapter.acp_command, adapter.install_hint);
 

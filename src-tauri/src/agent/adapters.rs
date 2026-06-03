@@ -75,13 +75,53 @@ pub fn find(id: &str) -> Option<&'static Adapter> {
     ADAPTERS.iter().find(|a| a.id == id)
 }
 
+/// The user's login-shell `PATH`, resolved once. A GUI app launched from Finder/Dock
+/// inherits a minimal `PATH` (`/usr/bin:/bin:…`), so CLIs installed via Homebrew,
+/// npm-global, nvm, or `~/.local/bin` aren't visible. We ask the login shell for its
+/// `PATH` and use it for both detection and spawning the adapter. Falls back to the
+/// process `PATH`.
+fn user_path() -> &'static std::ffi::OsString {
+    static CACHE: std::sync::OnceLock<std::ffi::OsString> = std::sync::OnceLock::new();
+    CACHE.get_or_init(|| {
+        resolve_login_path().unwrap_or_else(|| std::env::var_os("PATH").unwrap_or_default())
+    })
+}
+
+/// The resolved login-shell `PATH` as a `String`, for injecting into a spawned
+/// adapter's environment so it (and `npx`/`node`) resolve the same way detection does.
+pub fn user_path_string() -> String {
+    user_path().to_string_lossy().into_owned()
+}
+
+#[cfg(unix)]
+fn resolve_login_path() -> Option<std::ffi::OsString> {
+    use std::process::{Command, Stdio};
+    // Interactive login shell so it sources the user's profile/rc (where PATH is set).
+    // stdin/stderr are detached so an rc file can't block on a prompt or spew noise.
+    let shell = std::env::var_os("SHELL").unwrap_or_else(|| "/bin/zsh".into());
+    let out = Command::new(shell)
+        .args(["-ilc", "printf '%s' \"$PATH\""])
+        .stdin(Stdio::null())
+        .stderr(Stdio::null())
+        .output()
+        .ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    let path = String::from_utf8_lossy(&out.stdout);
+    let path = path.trim();
+    (!path.is_empty()).then(|| std::ffi::OsString::from(path))
+}
+
+#[cfg(not(unix))]
+fn resolve_login_path() -> Option<std::ffi::OsString> {
+    None
+}
+
 /// Best-effort: is `bin` resolvable on the user's `PATH`? Probe only — we never
 /// execute the binary here (no side effects, no auth prompts).
 pub fn on_path(bin: &str) -> bool {
-    let Some(path) = std::env::var_os("PATH") else {
-        return false;
-    };
-    std::env::split_paths(&path).any(|dir| {
+    std::env::split_paths(user_path()).any(|dir| {
         let candidate = dir.join(bin);
         candidate.is_file()
             || candidate.with_extension("exe").is_file()

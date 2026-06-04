@@ -8,6 +8,8 @@ import { StatusBadge } from "@/components/ui/Badge";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/StateView";
 import { InvestigateButton } from "@/features/agent/components/InvestigateButton";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { OpenInAwsButton } from "@/components/ui/OpenInAwsButton";
+import { awsConsole } from "@/lib/aws-console";
 import { toneFor } from "@/lib/status";
 import { arnName, taskDefShort } from "@/lib/arn";
 import { appErrorMessage } from "@/lib/errors";
@@ -89,6 +91,9 @@ export function TaskDetail({ tab }: { tab: Tab }) {
           >
             stop task
           </button>
+          <OpenInAwsButton
+            url={awsConsole.task(tab.scope.region, task.cluster, arnName(task.arn))}
+          />
         </div>
       </header>
 

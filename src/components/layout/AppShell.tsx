@@ -87,6 +87,7 @@ export function AppShell() {
     toggleDrawer,
     closeActiveTab,
     focusTabIndex,
+    goHome,
     drawerOpen,
     agentOpen,
     toggleAgent,
@@ -150,6 +151,7 @@ export function AppShell() {
 
   const commands = useMemo<PaletteCommand[]>(
     () => [
+      { id: "overview", title: "Go to Overview", hint: `${modLabel} 0`, run: goHome },
       {
         id: "go-resource",
         title: "Go to resource…",
@@ -182,6 +184,7 @@ export function AppShell() {
       drawerOpen,
       refresh,
       closeActiveTab,
+      goHome,
       agentOpen,
       toggleAgent,
       theme,
@@ -197,12 +200,13 @@ export function AppShell() {
       "mod+w": closeActiveTab,
       "mod+r": refresh,
       "mod+j": toggleAgent,
+      "mod+0": goHome,
     };
     for (let i = 1; i <= 9; i++) {
       map[`mod+${i}`] = () => focusTabIndex(i - 1);
     }
     return map;
-  }, [openPalette, toggleDrawer, closeActiveTab, refresh, toggleAgent, focusTabIndex]);
+  }, [openPalette, toggleDrawer, closeActiveTab, refresh, toggleAgent, focusTabIndex, goHome]);
 
   useKeybindings(keymap);
 

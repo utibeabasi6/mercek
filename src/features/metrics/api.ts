@@ -9,11 +9,13 @@ export function useServiceMetrics(
   cluster: string,
   service: string,
   containerInsights: boolean,
+  rangeSecs: number,
   enabled = true,
 ) {
   return useQuery({
-    queryKey: qk.metrics.service(scope, cluster, service, containerInsights),
-    queryFn: () => invoke("service_metrics", { scope, cluster, service, containerInsights }),
+    queryKey: qk.metrics.service(scope, cluster, service, containerInsights, rangeSecs),
+    queryFn: () =>
+      invoke("service_metrics", { scope, cluster, service, containerInsights, rangeSecs }),
     refetchInterval: REFETCH_MS.metrics,
     enabled,
   });
@@ -23,20 +25,26 @@ export function useClusterMetrics(
   scope: Scope,
   cluster: string,
   containerInsights: boolean,
+  rangeSecs: number,
   enabled = true,
 ) {
   return useQuery({
-    queryKey: qk.metrics.cluster(scope, cluster, containerInsights),
-    queryFn: () => invoke("cluster_metrics", { scope, cluster, containerInsights }),
+    queryKey: qk.metrics.cluster(scope, cluster, containerInsights, rangeSecs),
+    queryFn: () => invoke("cluster_metrics", { scope, cluster, containerInsights, rangeSecs }),
     refetchInterval: REFETCH_MS.metrics,
     enabled,
   });
 }
 
-export function useAlbMetrics(scope: Scope, targetGroupArn: string | undefined, enabled = true) {
+export function useAlbMetrics(
+  scope: Scope,
+  targetGroupArn: string | undefined,
+  rangeSecs: number,
+  enabled = true,
+) {
   return useQuery({
-    queryKey: qk.metrics.alb(scope, targetGroupArn ?? ""),
-    queryFn: () => invoke("alb_metrics", { scope, targetGroupArn: targetGroupArn! }),
+    queryKey: qk.metrics.alb(scope, targetGroupArn ?? "", rangeSecs),
+    queryFn: () => invoke("alb_metrics", { scope, targetGroupArn: targetGroupArn!, rangeSecs }),
     refetchInterval: REFETCH_MS.metrics,
     enabled: enabled && !!targetGroupArn,
   });

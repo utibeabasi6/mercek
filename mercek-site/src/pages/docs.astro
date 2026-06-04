@@ -38,6 +38,7 @@ const sections = [
     body: [
       "Browsing, metrics, logs, and the topology map are all reads. None of them change your infrastructure.",
       "Writes are explicit: scaling, forcing a deploy, stopping a task, updating a service, and rolling back. Each one shows a diff of what will change and waits for you to confirm.",
+      "Opening an interactive shell into a running container (ECS Exec) runs from the task view. If the service doesn't have execute-command turned on yet, Mercek can enable it for you — which starts a new deployment — and then connects you to the container.",
     ],
   },
   {

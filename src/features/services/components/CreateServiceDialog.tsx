@@ -1,12 +1,10 @@
 import { useState } from "react";
-import { Trash2 } from "lucide-react";
 import {
   useTaskDefFamilies,
   useTaskDefinition,
   useTaskDefinitionRevisions,
 } from "@/features/discovery/api";
-import { useRunTask } from "@/features/tasks/api";
-import { IconButton } from "@/components/ui/IconButton";
+import { useCreateService } from "@/features/services/api";
 import { Select } from "@/components/ui/Select";
 import { appErrorMessage } from "@/lib/errors";
 import { arnName } from "@/lib/arn";
@@ -18,10 +16,7 @@ const parseList = (s: string) =>
     .map((x) => x.trim())
     .filter(Boolean);
 
-// Command override is argv split on whitespace (no shell quoting).
-const parseArgv = (s: string) => s.trim().split(/\s+/).filter(Boolean);
-
-export function RunTaskDialog({
+export function CreateServiceDialog({
   scope,
   cluster,
   onClose,
@@ -34,41 +29,50 @@ export function RunTaskDialog({
   const [family, setFamily] = useState("");
   const revisions = useTaskDefinitionRevisions(scope, family, !!family);
   const [taskDef, setTaskDef] = useState("");
-  const [count, setCount] = useState(1);
+  const [name, setName] = useState("");
+  const [desired, setDesired] = useState(1);
   const [launchType, setLaunchType] = useState("FARGATE");
   const [subnetsStr, setSubnetsStr] = useState("");
   const [sgsStr, setSgsStr] = useState("");
   const [assignPublicIp, setAssignPublicIp] = useState(false);
-  const [containerName, setContainerName] = useState("");
-  const [commandStr, setCommandStr] = useState("");
-  const [envRows, setEnvRows] = useState<{ key: string; value: string }[]>([]);
-  const run = useRunTask(scope, cluster);
+  const [useLb, setUseLb] = useState(false);
+  const [targetGroupArn, setTargetGroupArn] = useState("");
+  const [lbContainer, setLbContainer] = useState("");
+  const [lbPort, setLbPort] = useState("");
+  const create = useCreateService(scope, cluster);
 
   const revList = revisions.data ?? [];
   const selectedRev = taskDef && revList.includes(taskDef) ? taskDef : (revList[0] ?? "");
   const td = useTaskDefinition(scope, selectedRev || undefined, !!selectedRev);
   const containers = td.data?.containerDefs ?? [];
-  const overrideContainer = containerName || containers[0]?.name || "";
+  const lbContainerName = lbContainer || containers[0]?.name || "";
   const isFargate = launchType === "FARGATE";
   const subnets = parseList(subnetsStr);
-  const canRun = !!selectedRev && (!isFargate || subnets.length > 0) && count >= 1;
+
+  const lbValid =
+    !useLb || (!!targetGroupArn.trim() && !!lbContainerName && Number(lbPort) > 0);
+  const canCreate =
+    !!name.trim() &&
+    !!selectedRev &&
+    desired >= 0 &&
+    (!isFargate || subnets.length > 0) &&
+    lbValid &&
+    !create.isPending;
 
   const submit = () => {
-    if (!canRun) return;
-    const command = parseArgv(commandStr);
-    const env = envRows.filter((r) => r.key.trim()).map((r) => ({ key: r.key, value: r.value }));
-    const hasOverride = command.length > 0 || env.length > 0;
-    run.mutate(
+    if (!canCreate) return;
+    create.mutate(
       {
+        name: name.trim(),
         taskDefinition: selectedRev,
-        count,
+        desiredCount: desired,
         launchType,
         subnets,
         securityGroups: parseList(sgsStr),
         assignPublicIp,
-        containerName: hasOverride ? overrideContainer : undefined,
-        command,
-        env,
+        targetGroupArn: useLb ? targetGroupArn.trim() : undefined,
+        containerName: useLb ? lbContainerName : undefined,
+        containerPort: useLb ? Number(lbPort) : undefined,
       },
       { onSuccess: onClose },
     );
@@ -76,19 +80,28 @@ export function RunTaskDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[12vh]"
+      className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh]"
       onMouseDown={onClose}
     >
       <div className="absolute inset-0 bg-[var(--overlay)]" />
       <div
-        className="relative w-[560px] max-w-[92vw] rounded-lg border border-border-strong bg-bg-elev shadow-2xl"
+        className="relative max-h-[80vh] w-[560px] max-w-[92vw] overflow-auto rounded-lg border border-border-strong bg-bg-elev shadow-2xl"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="border-b border-border px-4 py-2.5 text-fg">
-          run task in <span className="text-accent">{cluster}</span>
+          create service in <span className="text-accent">{cluster}</span>
         </div>
 
         <div className="flex flex-col gap-3 p-4">
+          <Row label="name">
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="service name"
+              className="min-w-0 flex-1 rounded border border-border bg-bg-elev-2 px-2 py-1 text-fg outline-none focus:border-accent"
+            />
+          </Row>
+
           <Row label="family">
             <Select
               value={family}
@@ -102,7 +115,6 @@ export function RunTaskDialog({
               options={(families.data ?? []).map((f) => ({ value: f, label: f }))}
             />
           </Row>
-
           <Row label="revision">
             <Select
               value={selectedRev}
@@ -115,11 +127,11 @@ export function RunTaskDialog({
           </Row>
 
           <div className="flex gap-6">
-            <Row label="count" width="w-20">
+            <Row label="desired" width="w-24">
               <input
-                value={count}
+                value={desired}
                 inputMode="numeric"
-                onChange={(e) => setCount(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
+                onChange={(e) => setDesired(Math.max(0, Math.floor(Number(e.target.value) || 0)))}
                 className="w-20 rounded border border-border bg-bg-elev-2 px-2 py-1 text-fg outline-none focus:border-accent"
               />
             </Row>
@@ -153,7 +165,7 @@ export function RunTaskDialog({
                   className="min-w-0 flex-1 rounded border border-border bg-bg-elev-2 px-2 py-1 text-fg outline-none focus:border-accent"
                 />
               </Row>
-              <label className="flex items-center gap-2 pl-[136px] text-fg-dim">
+              <label className="flex items-center gap-2 pl-[128px] text-fg-dim">
                 <input
                   type="checkbox"
                   checked={assignPublicIp}
@@ -164,80 +176,57 @@ export function RunTaskDialog({
             </>
           )}
 
-          {selectedRev && (
-            <details className="rounded border border-border">
-              <summary className="cursor-pointer px-3 py-1.5 text-fg-dim">
-                command / env overrides (optional)
-              </summary>
-              <div className="flex flex-col gap-2 border-t border-border p-3">
-                {containers.length > 1 && (
+          <details className="rounded border border-border">
+            <summary
+              className="cursor-pointer px-3 py-1.5 text-fg-dim"
+              onClick={() => setUseLb((v) => !v)}
+            >
+              load balancer (optional)
+            </summary>
+            <div className="flex flex-col gap-2 border-t border-border p-3">
+              <label className="flex items-center gap-2 text-fg-dim">
+                <input
+                  type="checkbox"
+                  checked={useLb}
+                  onChange={(e) => setUseLb(e.target.checked)}
+                />
+                attach to a target group
+              </label>
+              {useLb && (
+                <>
+                  <Row label="target group">
+                    <input
+                      value={targetGroupArn}
+                      onChange={(e) => setTargetGroupArn(e.target.value)}
+                      placeholder="arn:aws:elasticloadbalancing:…:targetgroup/…"
+                      className="min-w-0 flex-1 rounded border border-border bg-bg-elev-2 px-2 py-1 font-mono text-[12px] text-fg outline-none focus:border-accent"
+                    />
+                  </Row>
                   <Row label="container">
                     <Select
-                      value={overrideContainer}
-                      onChange={setContainerName}
+                      value={lbContainerName}
+                      onChange={setLbContainer}
+                      placeholder={selectedRev ? "select…" : "pick a revision first"}
                       options={containers.map((c) => ({ value: c.name, label: c.name }))}
                     />
                   </Row>
-                )}
-                <Row label="command">
-                  <input
-                    value={commandStr}
-                    onChange={(e) => setCommandStr(e.target.value)}
-                    placeholder="blank = image default · e.g. python manage.py migrate"
-                    className="min-w-0 flex-1 rounded border border-border bg-bg-elev-2 px-2 py-1 text-fg outline-none focus:border-accent"
-                  />
-                </Row>
-                <div className="flex flex-col gap-1.5">
-                  <div className="flex items-center gap-2">
-                    <span className="w-32 shrink-0 text-fg-dim">env</span>
-                    <button
-                      type="button"
-                      onClick={() => setEnvRows([...envRows, { key: "", value: "" }])}
-                      className="text-fg-muted hover:text-accent"
-                    >
-                      + add
-                    </button>
-                  </div>
-                  {envRows.map((r, i) => (
-                    <div key={i} className="flex items-center gap-2 pl-[140px]">
-                      <input
-                        value={r.key}
-                        placeholder="KEY"
-                        onChange={(e) =>
-                          setEnvRows(
-                            envRows.map((x, j) => (j === i ? { ...x, key: e.target.value } : x)),
-                          )
-                        }
-                        className="w-40 rounded border border-border bg-bg-elev-2 px-2 py-1 text-fg outline-none focus:border-accent"
-                      />
-                      <input
-                        value={r.value}
-                        placeholder="value"
-                        onChange={(e) =>
-                          setEnvRows(
-                            envRows.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)),
-                          )
-                        }
-                        className="min-w-0 flex-1 rounded border border-border bg-bg-elev-2 px-2 py-1 text-fg outline-none focus:border-accent"
-                      />
-                      <IconButton
-                        size="sm"
-                        onClick={() => setEnvRows(envRows.filter((_, j) => j !== i))}
-                        className="hover:!text-err"
-                        aria-label="remove"
-                      >
-                        <Trash2 />
-                      </IconButton>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </details>
-          )}
+                  <Row label="container port">
+                    <input
+                      value={lbPort}
+                      inputMode="numeric"
+                      onChange={(e) => setLbPort(e.target.value.replace(/[^0-9]/g, ""))}
+                      placeholder="80"
+                      className="w-24 rounded border border-border bg-bg-elev-2 px-2 py-1 text-fg outline-none focus:border-accent"
+                    />
+                  </Row>
+                </>
+              )}
+            </div>
+          </details>
 
-          {run.isError && (
+          {create.isError && (
             <div className="text-[12px] text-err">
-              {appErrorMessage(run.error as unknown as AppError)}
+              {appErrorMessage(create.error as unknown as AppError)}
             </div>
           )}
 
@@ -252,10 +241,10 @@ export function RunTaskDialog({
             <button
               type="button"
               onClick={submit}
-              disabled={!canRun || run.isPending}
+              disabled={!canCreate}
               className="rounded border border-accent bg-accent px-3 py-1 text-bg disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {run.isPending ? "running…" : `run ${count} task${count === 1 ? "" : "s"}`}
+              {create.isPending ? "creating…" : "create service"}
             </button>
           </div>
         </div>
@@ -266,7 +255,7 @@ export function RunTaskDialog({
 
 function Row({
   label,
-  width = "w-32",
+  width = "w-28",
   children,
 }: {
   label: string;

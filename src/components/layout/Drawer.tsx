@@ -4,6 +4,7 @@ import { IconButton } from "@/components/ui/IconButton";
 import { useShell, type Tab } from "@/app/shell";
 import { useClusterResources } from "@/features/discovery/api";
 import { LogTailPanel } from "@/features/logs/components/LogTailPanel";
+import { TerminalPanel } from "@/features/exec/components/TerminalPanel";
 import type { Task } from "@/types";
 
 const PANELS = ["logs", "events", "terminal"] as const;
@@ -38,7 +39,37 @@ function LogsPanel({ tab }: { tab: Tab | null }) {
   if (!taskArn) {
     return <div className="p-3 text-fg-muted">no running tasks to tail logs from yet</div>;
   }
-  return <LogTailPanel key={taskArn} scope={tab.scope} cluster={tab.clusterName} taskArn={taskArn} />;
+  // A service/cluster tab tails every task's stream interleaved; a single task tab
+  // tails just that task's stream.
+  const allTasks = tab.kind !== "task";
+  return (
+    <LogTailPanel
+      key={`${taskArn}-${allTasks}`}
+      scope={tab.scope}
+      cluster={tab.clusterName}
+      taskArn={taskArn}
+      initialAllTasks={allTasks}
+    />
+  );
+}
+
+// Exec needs a specific task; resolve one from a service/cluster tab like logs do.
+function TermPanel({ tab }: { tab: Tab | null }) {
+  const needResolve = !!tab && tab.kind !== "task" && !!tab.clusterName;
+  const { data: resources } = useClusterResources(
+    tab?.scope ?? { profile: "", region: "" },
+    tab?.clusterName ?? "",
+    needResolve,
+    false,
+  );
+  if (!tab || !tab.clusterName) {
+    return <div className="p-3 text-fg-muted">open a cluster, service, or task to start a shell</div>;
+  }
+  const taskArn = latestTaskArn(tab, resources?.tasks ?? []);
+  if (!taskArn) {
+    return <div className="p-3 text-fg-muted">no running tasks to exec into yet</div>;
+  }
+  return <TerminalPanel key={taskArn} scope={tab.scope} cluster={tab.clusterName} taskArn={taskArn} />;
 }
 
 export function Drawer() {
@@ -85,14 +116,11 @@ export function Drawer() {
             key={p}
             type="button"
             onClick={() => setPanel(p)}
-            disabled={p === "terminal"}
-            className={`-mb-px border-b px-2 py-1.5 disabled:opacity-50 ${
+            className={`-mb-px border-b px-2 py-1.5 ${
               panel === p ? "border-accent text-fg" : "border-transparent text-fg-muted"
             }`}
-            title={p === "terminal" ? "ECS Exec terminal — not yet available" : undefined}
           >
             {p}
-            {p === "terminal" && " ⋯"}
           </button>
         ))}
         <IconButton onClick={toggleDrawer} aria-label="close drawer" className="ml-auto">
@@ -105,9 +133,7 @@ export function Drawer() {
         {panel === "events" && (
           <div className="p-3 text-fg-muted">service / task events aggregate here (next).</div>
         )}
-        {panel === "terminal" && (
-          <div className="p-3 text-fg-muted">ECS Exec session — not yet available.</div>
-        )}
+        {panel === "terminal" && <TermPanel tab={activeTab} />}
       </div>
     </div>
   );

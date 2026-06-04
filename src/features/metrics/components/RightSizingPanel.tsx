@@ -46,7 +46,14 @@ export function RightSizingPanel({
   const graph = useScopeGraph(scope);
   const ciSetting = graph?.clusters.find((c) => c.name === cluster)?.settings.containerInsights;
   const insights = !!ciSetting && ciSetting !== "disabled";
-  const { data: metrics, isLoading } = useServiceMetrics(scope, cluster, service.name, insights);
+  // Size from a week of data so the verdict reflects a representative peak, not a blip.
+  const { data: metrics, isLoading } = useServiceMetrics(
+    scope,
+    cluster,
+    service.name,
+    insights,
+    604800,
+  );
   const { data: td } = useTaskDefinition(scope, service.taskDefArn);
 
   if (!td) return <LoadingState label="loading task definition…" />;

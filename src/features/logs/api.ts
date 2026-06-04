@@ -10,11 +10,14 @@ export function useLogTail(
   logGroup: string | undefined,
   logStream: string | undefined,
   enabled: boolean,
+  // When true, tail every stream in the group (all tasks) instead of one stream.
+  allTasks = false,
 ): LogEvent[] {
   const [lines, setLines] = useState<LogEvent[]>([]);
 
   useEffect(() => {
-    if (!enabled || !logGroup || !logStream) return;
+    if (!enabled || !logGroup) return;
+    if (!allTasks && !logStream) return;
     setLines([]);
 
     let tailId: number | null = null;
@@ -25,7 +28,10 @@ export function useLogTail(
       );
     });
 
-    invoke("start_log_tail", { scope, logGroup, logStream, onEvent: channel })
+    const started = allTasks
+      ? invoke("start_log_tail_group", { scope, logGroup, onEvent: channel })
+      : invoke("start_log_tail", { scope, logGroup, logStream: logStream!, onEvent: channel });
+    started
       .then((id) => {
         if (cancelled) void invoke("stop_log_tail", { tailId: id });
         else tailId = id;
@@ -36,7 +42,7 @@ export function useLogTail(
       cancelled = true;
       if (tailId != null) void invoke("stop_log_tail", { tailId });
     };
-  }, [scope.profile, scope.region, logGroup, logStream, enabled]);
+  }, [scope.profile, scope.region, logGroup, logStream, enabled, allTasks]);
 
   return lines;
 }

@@ -30,9 +30,13 @@ and dependencies without switching tabs and accounts.
   autoscaling, metrics, right-sizing, environment, networking, containers.
 - **Deployments & rollback** — live rollout state, circuit-breaker status, one-click
   rollback, and cross-environment / cross-region comparison.
-- **Logs** — per-task CloudWatch log tail in a bottom drawer.
+- **Logs** — CloudWatch log tail in a bottom drawer, across every task of a service or
+  just one, with a text filter, level highlighting, and copy / download.
+- **ECS Exec** — an interactive shell into a running container, with a one-click path to
+  enable execute-command on a service that doesn't have it yet.
 - **Metrics & cost** — CPU / memory / ALB via Container Insights with an AWS/ECS
-  fallback; a Fargate cost estimate and a right-sizing verdict from real peaks.
+  fallback; a selectable 1h–7d window with deploys marked on the charts; a Fargate cost
+  estimate and a right-sizing verdict from real peaks.
 - **Topology map** — internet → target group → service, plus dependency edges inferred
   from task-definition environment variables.
 - **Sentinel** — a background watcher that flags drift, stalled deploys, flapping tasks,

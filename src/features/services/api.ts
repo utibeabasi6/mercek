@@ -44,6 +44,17 @@ export function useForceDeploy(scope: Scope, cluster: string) {
   });
 }
 
+// Enable ECS Exec on a service and restart its tasks (so the exec agent runs in them).
+export function useEnableExec(scope: Scope, cluster: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (service: string) => invoke("enable_exec", { scope, cluster, service }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: qk.clusterResources(scope, cluster) });
+    },
+  });
+}
+
 export function useUpdateService(scope: Scope, cluster: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -53,6 +64,45 @@ export function useUpdateService(scope: Scope, cluster: string) {
       minimumHealthyPercent?: number;
       maximumPercent?: number;
     }) => invoke("update_service", { scope, cluster, ...vars }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: qk.clusterResources(scope, cluster) });
+    },
+  });
+}
+
+// Deploy a new image: register a fresh revision (image swapped, env/secrets kept) and
+// point the service at it.
+export function useDeployImage(scope: Scope, cluster: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: {
+      service: string;
+      baseArn: string;
+      containerName: string;
+      image: string;
+    }) => invoke("deploy_image", { scope, cluster, ...vars }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: qk.clusterResources(scope, cluster) });
+    },
+  });
+}
+
+// Create a new service in the cluster, then reconcile the cluster's resources.
+export function useCreateService(scope: Scope, cluster: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: {
+      name: string;
+      taskDefinition: string;
+      desiredCount: number;
+      launchType: string;
+      subnets: string[];
+      securityGroups: string[];
+      assignPublicIp: boolean;
+      targetGroupArn?: string;
+      containerName?: string;
+      containerPort?: number;
+    }) => invoke("create_service", { scope, cluster, ...vars }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: qk.clusterResources(scope, cluster) });
     },

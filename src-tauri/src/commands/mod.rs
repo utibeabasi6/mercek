@@ -1,5 +1,7 @@
 pub mod agent;
+pub mod clusters;
 pub mod discovery;
+pub mod exec;
 pub mod images;
 pub mod logs;
 pub mod metrics;

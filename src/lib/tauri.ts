@@ -6,6 +6,7 @@ import type {
   AgentSessionUpdate,
   AwsProfile,
   ConnectInfo,
+  Cluster,
   ClusterResources,
   EniDetail,
   EnvVar,
@@ -74,6 +75,39 @@ type CommandMap = {
     result: Service;
   };
   force_deploy: { args: { scope: Scope; cluster: string; service: string }; result: Service };
+  enable_exec: { args: { scope: Scope; cluster: string; service: string }; result: Service };
+  deploy_image: {
+    args: {
+      scope: Scope;
+      cluster: string;
+      service: string;
+      baseArn: string;
+      containerName: string;
+      image: string;
+    };
+    result: Service;
+  };
+  create_service: {
+    args: {
+      scope: Scope;
+      cluster: string;
+      name: string;
+      taskDefinition: string;
+      desiredCount: number;
+      launchType: string;
+      subnets: string[];
+      securityGroups: string[];
+      assignPublicIp: boolean;
+      targetGroupArn?: string;
+      containerName?: string;
+      containerPort?: number;
+    };
+    result: Service;
+  };
+  create_cluster: {
+    args: { scope: Scope; name: string; containerInsights: boolean };
+    result: Cluster;
+  };
   stop_task: {
     args: { scope: Scope; cluster: string; task: string; reason?: string };
     result: Task;
@@ -88,6 +122,9 @@ type CommandMap = {
       subnets: string[];
       securityGroups: string[];
       assignPublicIp: boolean;
+      containerName?: string;
+      command: string[];
+      env: EnvVar[];
     };
     result: Task[];
   };
@@ -104,20 +141,72 @@ type CommandMap = {
     };
     result: TaskDefinition;
   };
+  register_task_def: {
+    args: {
+      scope: Scope;
+      family: string;
+      networkMode: string;
+      requiresCompatibilities: string[];
+      cpu?: string;
+      memory?: string;
+      executionRoleArn?: string;
+      taskRoleArn?: string;
+      containers: {
+        name: string;
+        image: string;
+        cpu?: number;
+        memory?: number;
+        port?: number;
+        command: string[];
+        essential: boolean;
+        env: EnvVar[];
+      }[];
+    };
+    result: TaskDefinition;
+  };
   service_metrics: {
-    args: { scope: Scope; cluster: string; service: string; containerInsights: boolean };
+    args: {
+      scope: Scope;
+      cluster: string;
+      service: string;
+      containerInsights: boolean;
+      rangeSecs: number;
+    };
     result: MetricSeries[];
   };
   cluster_metrics: {
-    args: { scope: Scope; cluster: string; containerInsights: boolean };
+    args: { scope: Scope; cluster: string; containerInsights: boolean; rangeSecs: number };
     result: MetricSeries[];
   };
-  alb_metrics: { args: { scope: Scope; targetGroupArn: string }; result: MetricSeries[] };
+  alb_metrics: {
+    args: { scope: Scope; targetGroupArn: string; rangeSecs: number };
+    result: MetricSeries[];
+  };
   start_log_tail: {
     args: { scope: Scope; logGroup: string; logStream: string; onEvent: Channel<LogEvent> };
     result: number;
   };
+  start_log_tail_group: {
+    args: { scope: Scope; logGroup: string; filterPattern?: string; onEvent: Channel<LogEvent> };
+    result: number;
+  };
   stop_log_tail: { args: { tailId: number }; result: void };
+  exec_start: {
+    args: {
+      scope: Scope;
+      cluster: string;
+      task: string;
+      container: string;
+      command?: string;
+      rows: number;
+      cols: number;
+      onOutput: Channel<string>;
+    };
+    result: number;
+  };
+  exec_write: { args: { session: number; data: string }; result: void };
+  exec_resize: { args: { session: number; rows: number; cols: number }; result: void };
+  exec_stop: { args: { session: number }; result: void };
   describe_eni: { args: { scope: Scope; eniId: string }; result: EniDetail };
   image_scan: {
     args: { scope: Scope; repository: string; reference: string };

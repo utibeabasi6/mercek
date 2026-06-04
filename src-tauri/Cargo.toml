@@ -1,6 +1,6 @@
 [package]
 name = "mercek"
-version = "0.1.1"
+version = "0.2.0"
 description = "A desktop IDE for AWS ECS"
 authors = ["Utibeabasi Umanah <utibeabasiumanah6@gmail.com>"]
 edition = "2021"
@@ -60,4 +60,7 @@ agent-client-protocol-rmcp = "0.13"
 # MCP tool server: bridged over ACP (no port) AND runnable as `mercek --mcp` over
 # stdio (the standard way harnesses like Claude Code load MCP servers — see Pencil).
 rmcp = { version = "1", features = ["server", "macros", "transport-io"] }
+# PTY host for the ECS Exec terminal: spawns `aws ecs execute-command --interactive`
+# in a pseudo-terminal so it's a real interactive shell.
+portable-pty = "0.9"
 

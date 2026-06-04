@@ -39,15 +39,19 @@ const taskColumns: ColumnDef<Task, unknown>[] = [
   },
 ];
 import { TargetsPanel } from "@/features/services/components/TargetsPanel";
+import { DeploymentTimeline } from "@/features/services/components/DeploymentTimeline";
 import { ScalingPanel } from "@/features/services/components/ScalingPanel";
 import { ScaleDialog } from "@/features/services/components/ScaleDialog";
 import { UpdateDialog } from "@/features/services/components/UpdateDialog";
 import { RollbackDialog } from "@/features/services/components/RollbackDialog";
 import { CompareServiceDialog } from "@/features/services/components/CompareServiceDialog";
+import { DeployImageDialog } from "@/features/services/components/DeployImageDialog";
 import { ServiceMetrics } from "@/features/metrics/components/MetricsView";
 import { RightSizingPanel } from "@/features/metrics/components/RightSizingPanel";
 import { ObservationsSection } from "@/features/sentinel/components/ObservationsSection";
 import { ImageScansSection } from "@/features/images/components/ImageScansSection";
+import { OpenInAwsButton } from "@/components/ui/OpenInAwsButton";
+import { awsConsole } from "@/lib/aws-console";
 import { toneFor } from "@/lib/status";
 import { relativeTime } from "@/lib/format";
 import { appErrorMessage } from "@/lib/errors";
@@ -66,6 +70,7 @@ export function ServiceDetail({ tab }: { tab: Tab }) {
   const [scaling, setScaling] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [confirmDeploy, setConfirmDeploy] = useState(false);
+  const [deployingImage, setDeployingImage] = useState(false);
   const [rollbackTo, setRollbackTo] = useState<string | null>(null);
   const [comparing, setComparing] = useState(false);
   const forceDeploy = useForceDeploy(tab.scope, tab.clusterName ?? "");
@@ -125,6 +130,14 @@ export function ServiceDetail({ tab }: { tab: Tab }) {
           </button>
           <button
             type="button"
+            onClick={() => setDeployingImage(true)}
+            title="register a new revision with a new image, then update the service"
+            className="shrink-0 whitespace-nowrap rounded border border-border px-2 py-1 text-fg-dim hover:border-border-strong hover:text-fg"
+          >
+            deploy image
+          </button>
+          <button
+            type="button"
             onClick={() => setConfirmDeploy(true)}
             className="shrink-0 whitespace-nowrap rounded border border-border px-2 py-1 text-fg-dim hover:border-border-strong hover:text-fg"
           >
@@ -145,6 +158,9 @@ export function ServiceDetail({ tab }: { tab: Tab }) {
           >
             compare
           </button>
+          <OpenInAwsButton
+            url={awsConsole.service(tab.scope.region, service.cluster, service.name)}
+          />
         </div>
       </header>
 
@@ -170,6 +186,14 @@ export function ServiceDetail({ tab }: { tab: Tab }) {
           scope={tab.scope}
           service={service}
           onClose={() => setComparing(false)}
+        />
+      )}
+
+      {deployingImage && (
+        <DeployImageDialog
+          scope={tab.scope}
+          service={service}
+          onClose={() => setDeployingImage(false)}
         />
       )}
 
@@ -199,6 +223,7 @@ export function ServiceDetail({ tab }: { tab: Tab }) {
         tabs={[
           { id: "overview", label: "overview" },
           { id: "deployments", label: "deployments" },
+          { id: "timeline", label: "timeline" },
           { id: "events", label: "events" },
           { id: "tasks", label: `tasks (${tasks.length})` },
           { id: "targets", label: "targets" },
@@ -349,6 +374,8 @@ export function ServiceDetail({ tab }: { tab: Tab }) {
             </div>
           </div>
         )}
+
+        {sub === "timeline" && <DeploymentTimeline service={service} />}
 
         {sub === "events" && (
           <div className="flex flex-col gap-1">

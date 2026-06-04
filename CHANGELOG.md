@@ -6,6 +6,41 @@ All notable changes to Mercek are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-06-04
+
+### Added
+
+- Create ECS resources from the UI: new clusters (with optional Container Insights), new
+  task definitions from scratch (family, one or more containers with image / cpu / memory /
+  port / command / env, launch type, network mode, and task roles), and new services (task
+  definition, desired count, launch type, awsvpc networking, and an optional load-balancer
+  target group). Plus a one-step "deploy image" on a service — registers a new task-def
+  revision with the image swapped (env and secrets preserved) and rolls the service onto it.
+- "Open in AWS console" buttons on the cluster, service, and task views (partition-aware:
+  standard, GovCloud, and China consoles).
+- A multi-cluster Overview — the home view — showing service health (failed / degraded /
+  deploying / healthy) across every active scope and cluster, with a "needs attention"
+  list that jumps straight to the affected service. Reachable from the tab bar, the
+  command palette, or ⌘0.
+- A per-service deployment timeline that merges the active deployments with the
+  service-events feed into one chronological view, colour-coding revision changes,
+  rollbacks, circuit-breaker trips, task churn, and health.
+- ECS Exec: open an interactive shell into a running container from the task view. When a
+  service doesn't have execute-command enabled, the terminal detects it and offers to
+  enable it (a forced new deployment) in one click; containers without a shell can run an
+  explicit command instead.
+- Tail logs across every task in a service's log group, not just the latest, with a
+  substring filter, log-level highlighting, and copy or download of the visible lines.
+- A selectable metrics time range (1h, 6h, 24h, 7d) with deploy markers drawn on the
+  charts, so a CPU, memory, or latency shift lines up with the rollout behind it.
+
+### Changed
+
+- Running a one-off task now accepts per-container command and environment overrides.
+- The agent bounds each ECS read with a timeout so a slow call can't hang a turn, and
+  stays within the AWS scopes you've activated. The chat input is now a single composer
+  with an inline mode selector.
+
 ## [0.1.1] - 2026-06-03
 
 ### Fixed
@@ -37,6 +72,7 @@ First public release. macOS (Apple Silicon and Intel).
 - Command palette and keyboard navigation.
 - Light and dark themes, with persisted table columns and CSV export.
 
-[Unreleased]: https://github.com/utibeabasi6/mercek/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/utibeabasi6/mercek/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/utibeabasi6/mercek/releases/tag/v0.2.0
 [0.1.1]: https://github.com/utibeabasi6/mercek/releases/tag/v0.1.1
 [0.1.0]: https://github.com/utibeabasi6/mercek/releases/tag/v0.1.0

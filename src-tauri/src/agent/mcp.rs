@@ -60,9 +60,28 @@ impl EcsToolServer {
     }
 
     async fn read(&self, tool: &str, input: ToolArgs) -> Result<CallToolResult, McpError> {
-        let v = dispatch::read_tool(&self.ctx, tool, &input.into_value())
-            .await
-            .map_err(|e| McpError::internal_error(e.to_string(), None))?;
+        let value = input.into_value();
+        // Bound every tool call. A slow or unreachable scope (e.g. a profile whose
+        // credentials aren't a real AWS account) would otherwise leave the agent stuck
+        // at "thinking…" forever. On timeout we drop the future, which cancels the
+        // in-flight AWS request, and hand the agent an error it can recover from.
+        let v = match tokio::time::timeout(
+            std::time::Duration::from_secs(20),
+            dispatch::read_tool(&self.ctx, tool, &value),
+        )
+        .await
+        {
+            Ok(res) => res.map_err(|e| McpError::internal_error(e.to_string(), None))?,
+            Err(_) => {
+                return Err(McpError::internal_error(
+                    format!(
+                        "{tool} timed out after 20s — the scope may be slow or not a real AWS \
+                         account. Skip it and try a specific scope from list_scopes."
+                    ),
+                    None,
+                ))
+            }
+        };
         Ok(CallToolResult::success(vec![Content::text(v.to_string())]))
     }
 

@@ -1,4 +1,4 @@
-import { Box, Boxes, Container, Sparkles, X } from "lucide-react";
+import { Box, Boxes, Container, LayoutDashboard, Sparkles, X } from "lucide-react";
 import { useShell, type TabKind } from "@/app/shell";
 import { IconButton } from "@/components/ui/IconButton";
 
@@ -9,12 +9,23 @@ const KIND_ICON: Record<TabKind, typeof Box> = {
 };
 
 export function TabBar() {
-  const { tabs, activeTabId, focusTab, closeTab, agentFlash } = useShell();
+  const { tabs, activeTabId, focusTab, closeTab, agentFlash, goHome } = useShell();
 
   if (tabs.length === 0) return null;
 
   return (
     <div className="flex h-9 items-stretch overflow-x-auto border-b border-border bg-bg">
+      <button
+        type="button"
+        onClick={goHome}
+        title="Overview"
+        className={`flex shrink-0 items-center gap-2 border-r border-border px-3 ${
+          activeTabId === null ? "bg-bg-elev text-fg" : "text-fg-muted hover:text-fg-dim"
+        }`}
+      >
+        <LayoutDashboard size={14} className="shrink-0" />
+        <span className="text-[12px]">Overview</span>
+      </button>
       {tabs.map((tab) => {
         const active = tab.id === activeTabId;
         const KindIcon = KIND_ICON[tab.kind];

@@ -27,4 +27,8 @@ declare module "lucide-react" {
   export const ChevronRight: LucideIcon;
   export const ChevronDown: LucideIcon;
   export const Bell: LucideIcon;
+  export const Send: LucideIcon;
+  export const Square: LucideIcon;
+  export const LayoutDashboard: LucideIcon;
+  export const ExternalLink: LucideIcon;
 }

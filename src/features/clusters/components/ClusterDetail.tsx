@@ -8,6 +8,9 @@ import { ClusterMetrics } from "@/features/metrics/components/MetricsView";
 import { ObservationsSection } from "@/features/sentinel/components/ObservationsSection";
 import { TopologyView } from "@/features/topology/TopologyView";
 import { RunTaskDialog } from "@/features/tasks/components/RunTaskDialog";
+import { CreateServiceDialog } from "@/features/services/components/CreateServiceDialog";
+import { OpenInAwsButton } from "@/components/ui/OpenInAwsButton";
+import { awsConsole } from "@/lib/aws-console";
 import { shortAccount } from "@/lib/arn";
 
 export function ClusterDetail({ tab }: { tab: Tab }) {
@@ -21,6 +24,7 @@ export function ClusterDetail({ tab }: { tab: Tab }) {
   const cluster = graph?.clusters.find((c) => c.name === tab.clusterName) ?? null;
   const [sub, setSub] = useState(tab.section ?? "overview");
   const [running, setRunning] = useState(false);
+  const [creatingService, setCreatingService] = useState(false);
   useEffect(() => {
     if (tab.section) setSub(tab.section);
   }, [tab.section, tab.focusId]);
@@ -41,11 +45,19 @@ export function ClusterDetail({ tab }: { tab: Tab }) {
         <div className="ml-auto flex shrink-0 items-center gap-3">
           <button
             type="button"
+            onClick={() => setCreatingService(true)}
+            className="shrink-0 whitespace-nowrap rounded border border-border px-2 py-1 text-fg-dim hover:border-border-strong hover:text-fg"
+          >
+            create service
+          </button>
+          <button
+            type="button"
             onClick={() => setRunning(true)}
             className="shrink-0 whitespace-nowrap rounded border border-border px-2 py-1 text-fg-dim hover:border-border-strong hover:text-fg"
           >
             run task
           </button>
+          <OpenInAwsButton url={awsConsole.cluster(graph.scope.region, cluster.name)} />
           <span className="shrink-0 whitespace-nowrap text-[12px] text-fg-muted">
             {shortAccount(graph.accountId)} · {graph.scope.region}
           </span>
@@ -54,6 +66,14 @@ export function ClusterDetail({ tab }: { tab: Tab }) {
 
       {running && (
         <RunTaskDialog scope={graph.scope} cluster={cluster.name} onClose={() => setRunning(false)} />
+      )}
+
+      {creatingService && (
+        <CreateServiceDialog
+          scope={graph.scope}
+          cluster={cluster.name}
+          onClose={() => setCreatingService(false)}
+        />
       )}
 
       <SubTabs

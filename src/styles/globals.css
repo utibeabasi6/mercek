@@ -127,3 +127,31 @@ button:disabled {
     opacity: 0;
   }
 }
+
+/* ECS Exec terminal (wterm) themed to the app. wterm reads these CSS variables
+   (inherited from this wrapper) for the background, foreground, and ANSI palette. */
+.mercek-term {
+  --term-bg: var(--bg);
+  --term-fg: var(--fg);
+  --term-color-0: #2b3038;
+  --term-color-1: var(--err);
+  --term-color-2: var(--ok);
+  --term-color-3: var(--warn);
+  --term-color-4: var(--accent);
+  --term-color-5: #c678dd;
+  --term-color-6: #56b6c2;
+  --term-color-7: var(--fg-dim);
+  --term-color-8: var(--fg-muted);
+  --term-color-9: #ff7b6b;
+  --term-color-10: #5fd070;
+  --term-color-11: #e8b84b;
+  --term-color-12: #8fb3ff;
+  --term-color-13: #d79be8;
+  --term-color-14: #72c9d4;
+  --term-color-15: var(--fg);
+}
+
+.mercek-term,
+.mercek-term * {
+  font-family: var(--font-mono);
+}

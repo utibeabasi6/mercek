@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Spinner } from "@/components/ui/Spinner";
 import { Select } from "@/components/ui/Select";
-import { Wrench } from "lucide-react";
+import { Send, Square, Wrench } from "lucide-react";
 import { ErrorBanner } from "@/components/ui/StateView";
 import { Markdown } from "@/components/ui/Markdown";
 import type { ThreadItem } from "@/features/agent/api";
@@ -74,9 +74,9 @@ function UpdateRow({ u }: { u: AgentSessionUpdate }) {
     case "toolCall": {
       const name = ecsToolName(u.tool) ?? u.tool;
       return (
-        <div className="my-1 flex min-w-0 items-center gap-1.5 overflow-hidden rounded border border-border bg-bg-elev px-2 py-1 text-[12px]">
-          <Wrench size={13} className="shrink-0 text-fg-muted" />
-          <span className="shrink truncate font-medium text-accent" title={u.tool}>
+        <div className="my-0.5 flex min-w-0 items-center gap-2 overflow-hidden rounded-md bg-bg-elev/50 px-2 py-1 text-[12px]">
+          <Wrench size={12} className="shrink-0 text-fg-muted" />
+          <span className="shrink-0 font-medium text-fg-dim" title={u.tool}>
             {name}
           </span>
           {u.args && u.args !== "{}" && (
@@ -230,57 +230,59 @@ export function ChatThread({
           <ErrorBanner message={error} />
         </div>
       )}
-      {modes.length > 0 && (
-        <div className="flex shrink-0 items-center gap-2 border-t border-border px-2 pt-2">
-          <span className="shrink-0 text-[11px] text-fg-muted">mode</span>
-          <div className="min-w-0 flex-1">
-            <Select
-              value={currentMode ?? ""}
-              onChange={onSetMode}
-              placeholder="default"
-              options={modes.map((m) => ({ value: m.id, label: m.name }))}
-            />
+      {/* Athas-style unified composer: textarea + an inline control row (mode + send). */}
+      <div className="shrink-0 border-t border-border p-2">
+        <div className="flex flex-col rounded-lg border border-border bg-bg-elev-2 transition-colors focus-within:border-accent">
+          <textarea
+            ref={taRef}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                submit();
+              }
+            }}
+            rows={1}
+            placeholder="Message Mercek about your ECS…"
+            className="max-h-40 min-h-[40px] w-full resize-none bg-transparent px-3 py-2 text-fg outline-none placeholder:text-fg-muted"
+          />
+          <div className="flex items-center gap-2 px-2 pb-1.5">
+            {modes.length > 0 && (
+              <div className="min-w-0 max-w-[60%]">
+                <Select
+                  value={currentMode ?? ""}
+                  onChange={onSetMode}
+                  placeholder="Default"
+                  options={modes.map((m) => ({ value: m.id, label: m.name }))}
+                />
+              </div>
+            )}
+            <div className="ml-auto flex items-center gap-1">
+              {busy ? (
+                <button
+                  type="button"
+                  onClick={onStop}
+                  title="stop the current turn"
+                  className="grid size-7 place-items-center rounded-md border border-err text-err transition-colors hover:bg-err hover:text-bg"
+                >
+                  <Square size={13} />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={submit}
+                  disabled={!text.trim()}
+                  title="send · ⏎"
+                  className="grid size-7 place-items-center rounded-md bg-accent text-bg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Send size={14} />
+                </button>
+              )}
+            </div>
           </div>
         </div>
-      )}
-      <div
-        className={`flex shrink-0 items-end gap-2 p-2 ${
-          modes.length > 0 ? "" : "border-t border-border"
-        }`}
-      >
-        <textarea
-          ref={taRef}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              submit();
-            }
-          }}
-          rows={1}
-          placeholder="ask the agent…   ⏎ send · ⇧⏎ newline"
-          className="max-h-40 min-h-[38px] min-w-0 flex-1 resize-none rounded border border-border bg-bg-elev-2 px-2 py-1.5 text-fg outline-none focus:border-accent"
-        />
-        {busy ? (
-          <button
-            type="button"
-            onClick={onStop}
-            title="stop the current turn"
-            className="shrink-0 rounded border border-err px-3 py-1 text-err hover:bg-err hover:text-bg"
-          >
-            stop
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={submit}
-            disabled={!text.trim()}
-            className="shrink-0 rounded border border-accent bg-accent px-3 py-1 text-bg disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            send
-          </button>
-        )}
+        <div className="px-1 pt-1 text-[10px] text-fg-muted">⏎ send · ⇧⏎ newline</div>
       </div>
     </div>
   );

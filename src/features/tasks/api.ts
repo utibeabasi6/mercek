@@ -32,6 +32,9 @@ export interface RunTaskVars {
   subnets: string[];
   securityGroups: string[];
   assignPublicIp: boolean;
+  containerName?: string;
+  command: string[];
+  env: EnvVar[];
 }
 
 export function useRunTask(scope: Scope, cluster: string) {
@@ -59,6 +62,40 @@ export function useRegisterRevision(scope: Scope) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (vars: RegisterVars) => invoke("register_revision", { scope, ...vars }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["taskDefinitions"] });
+      void qc.invalidateQueries({ queryKey: ["taskDefFamilies"] });
+    },
+  });
+}
+
+export interface NewContainerVars {
+  name: string;
+  image: string;
+  cpu?: number;
+  memory?: number;
+  port?: number;
+  command: string[];
+  essential: boolean;
+  env: EnvVar[];
+}
+
+export interface RegisterTaskDefVars {
+  family: string;
+  networkMode: string;
+  requiresCompatibilities: string[];
+  cpu?: string;
+  memory?: string;
+  executionRoleArn?: string;
+  taskRoleArn?: string;
+  containers: NewContainerVars[];
+}
+
+// Write path: register a brand-new task definition (new family); refresh the pickers.
+export function useRegisterTaskDef(scope: Scope) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: RegisterTaskDefVars) => invoke("register_task_def", { scope, ...vars }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["taskDefinitions"] });
       void qc.invalidateQueries({ queryKey: ["taskDefFamilies"] });

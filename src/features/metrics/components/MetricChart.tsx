@@ -9,7 +9,14 @@ function cssVar(name: string, fallback: string): string {
   return value || fallback;
 }
 
-export function MetricChart({ series }: { series: MetricSeries }) {
+export function MetricChart({
+  series,
+  markers = [],
+}: {
+  series: MetricSeries;
+  // Vertical deploy markers (epoch seconds) drawn over the chart.
+  markers?: { ts: number; label: string }[];
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const plotRef = useRef<uPlot | null>(null);
 
@@ -43,6 +50,31 @@ export function MetricChart({ series }: { series: MetricSeries }) {
         },
       ],
       series: [{}, { stroke: accent, width: 1.5, fill: `${accent}22`, points: { show: false } }],
+      plugins: markers.length
+        ? [
+            {
+              hooks: {
+                // Dashed vertical line at each deploy so a metric shift lines up with it.
+                draw: (u: uPlot) => {
+                  const ctx = u.ctx;
+                  ctx.save();
+                  ctx.strokeStyle = cssVar("--warn", "#d9a23a");
+                  ctx.lineWidth = 1;
+                  ctx.setLineDash([3, 3]);
+                  for (const m of markers) {
+                    const x = Math.round(u.valToPos(m.ts, "x", true));
+                    if (x < u.bbox.left || x > u.bbox.left + u.bbox.width) continue;
+                    ctx.beginPath();
+                    ctx.moveTo(x, u.bbox.top);
+                    ctx.lineTo(x, u.bbox.top + u.bbox.height);
+                    ctx.stroke();
+                  }
+                  ctx.restore();
+                },
+              },
+            },
+          ]
+        : [],
     };
 
     const plot = new uPlot(opts, data, el);
@@ -60,7 +92,7 @@ export function MetricChart({ series }: { series: MetricSeries }) {
       plot.destroy();
       plotRef.current = null;
     };
-  }, [series]);
+  }, [series, markers]);
 
   return (
     <div className="w-full">

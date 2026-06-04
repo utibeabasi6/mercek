@@ -25,11 +25,17 @@ export const qk = {
   scaling: (scope: Scope, cluster: string, service: string) =>
     ["scaling", ...scopeKey(scope), cluster, service] as const,
   metrics: {
-    service: (scope: Scope, cluster: string, service: string, insights: boolean) =>
-      ["metrics", "service", ...scopeKey(scope), cluster, service, insights] as const,
-    cluster: (scope: Scope, cluster: string, insights: boolean) =>
-      ["metrics", "cluster", ...scopeKey(scope), cluster, insights] as const,
-    alb: (scope: Scope, targetGroupArn: string) =>
-      ["metrics", "alb", ...scopeKey(scope), targetGroupArn] as const,
+    service: (
+      scope: Scope,
+      cluster: string,
+      service: string,
+      insights: boolean,
+      rangeSecs: number,
+    ) =>
+      ["metrics", "service", ...scopeKey(scope), cluster, service, insights, rangeSecs] as const,
+    cluster: (scope: Scope, cluster: string, insights: boolean, rangeSecs: number) =>
+      ["metrics", "cluster", ...scopeKey(scope), cluster, insights, rangeSecs] as const,
+    alb: (scope: Scope, targetGroupArn: string, rangeSecs: number) =>
+      ["metrics", "alb", ...scopeKey(scope), targetGroupArn, rangeSecs] as const,
   },
 } as const;

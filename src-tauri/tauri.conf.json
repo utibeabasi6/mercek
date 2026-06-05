@@ -41,7 +41,7 @@
       "endpoints": [
         "https://github.com/utibeabasi6/mercek/releases/latest/download/latest.json"
       ],
-      "pubkey": "REPLACE_WITH_TAURI_SIGNER_PUBLIC_KEY",
+      "pubkey": "TAURI_SIGNER_PUBLIC_KEY",
       "windows": {
         "installMode": "passive"
       }

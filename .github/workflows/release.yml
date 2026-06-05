@@ -1,11 +1,11 @@
 name: Release
 
 # Cut a release by pushing a version tag, e.g.:
-#   git tag v0.2.0 && git push origin v0.2.0
-# tauri-action builds the bundles for macOS (universal .app + .dmg), Linux (.deb +
-# .AppImage), and Windows (.msi + NSIS .exe), generates the signed updater artifacts
-# + latest.json, and attaches everything to a DRAFT GitHub Release for the tag. Publish
-# the draft when ready — the updater's endpoint only serves a *published* release.
+#   git tag v0.3.0 && git push origin v0.3.0
+# tauri-action builds the bundles for macOS (universal .app + .dmg) and Linux (.deb +
+# .AppImage), generates the signed updater artifacts + latest.json, and attaches
+# everything to a DRAFT GitHub Release for the tag. Publish the draft when ready — the
+# updater's endpoint only serves a *published* release.
 #
 # Auto-update requires two repo secrets (generate the key with `pnpm tauri signer
 # generate`): TAURI_SIGNING_PRIVATE_KEY and TAURI_SIGNING_PRIVATE_KEY_PASSWORD. The
@@ -33,9 +33,9 @@ jobs:
           - platform: ubuntu-22.04
             args: ""
             rust-targets: ""
-          - platform: windows-latest
-            args: ""
-            rust-targets: ""
+          # Windows is not built yet: the agent's intent back-channel (agent/ipc.rs) uses
+          # a Unix domain socket, which has no Windows equivalent here. Add windows-latest
+          # once that IPC is ported to a named pipe / loopback socket.
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v6

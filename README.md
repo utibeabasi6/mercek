@@ -57,7 +57,7 @@ and dependencies without switching tabs and accounts.
 
 ## Install
 
-macOS (Apple Silicon & Intel), Linux (`.deb` / `.AppImage`), and Windows (`.msi` / `.exe`).
+macOS (Apple Silicon & Intel) and Linux (`.deb` / `.AppImage`); Windows is planned.
 Download the latest build from the
 [releases page](https://github.com/utibeabasi6/mercek/releases/latest), or build from
 source below. Once installed, Mercek keeps itself up to date — it checks for a new release

@@ -12,8 +12,8 @@ All notable changes to Mercek are documented here. The format is based on
 
 - In-app auto-update: Mercek checks for a new release on launch and offers a one-click
   "Update & restart". Update artifacts are signed and verified before installing.
-- Linux (.deb / .AppImage) and Windows (.msi / .exe) builds are now produced by the
-  release pipeline alongside the universal macOS build.
+- Linux (.deb / .AppImage) builds are now produced by the release pipeline alongside
+  the universal macOS build.
 - Delete / teardown from the UI, each behind a confirmation: delete a service (stopping
   its running tasks), delete an empty cluster, and deregister a task-definition revision.
 - The run-task and create-service forms now pick the VPC, subnets, and security groups for

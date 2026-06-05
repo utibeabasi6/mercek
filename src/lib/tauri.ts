@@ -29,6 +29,7 @@ type CommandMap = {
   agent_list: { args: void; result: AgentInfo[] };
   agent_connect: { args: { agentId: string; model?: string }; result: ConnectInfo };
   agent_set_mode: { args: { modeId: string }; result: void };
+  agent_respond_permission: { args: { id: number; optionId: string | null }; result: void };
   agent_prompt: {
     args: {
       text: string;

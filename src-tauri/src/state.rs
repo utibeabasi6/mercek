@@ -1,7 +1,9 @@
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::sync::Mutex;
+
+use tokio::sync::oneshot;
 
 use tokio::sync::Mutex as AsyncMutex;
 use tokio::task::AbortHandle;
@@ -29,6 +31,12 @@ pub struct AppState {
     /// out-of-process MCP tools (over the IPC socket) reach the live channel. Set by
     /// `agent_prompt` for the turn's duration.
     pub agent_intent_sink: crate::agent::ipc::IntentSink,
+    /// Pending harness permission prompts: id → a sender the UI's reply fires. Lives
+    /// OUTSIDE `agent` (a running turn holds that mutex while it awaits the reply) so
+    /// `agent_respond_permission` can resolve it mid-turn. `Some(optionId)` = the user
+    /// picked that option; `None` = dismissed → deny. Shared into the session at connect.
+    pub agent_permissions: Arc<Mutex<HashMap<u32, oneshot::Sender<Option<String>>>>>,
+    pub agent_perm_seq: Arc<AtomicU32>,
     tails: Mutex<HashMap<u64, AbortHandle>>,
     tail_seq: AtomicU64,
     /// Live ECS Exec terminal sessions (PTY master + stdin writer + child).
@@ -44,6 +52,8 @@ impl AppState {
             agent: AsyncMutex::new(None),
             agent_canceller: Mutex::new(None),
             agent_intent_sink: Arc::new(Mutex::new(None)),
+            agent_permissions: Arc::new(Mutex::new(HashMap::new())),
+            agent_perm_seq: Arc::new(AtomicU32::new(1)),
             tails: Mutex::new(HashMap::new()),
             tail_seq: AtomicU64::new(1),
             exec_sessions: Mutex::new(HashMap::new()),

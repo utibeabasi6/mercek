@@ -86,7 +86,13 @@ pub async fn agent_connect(
     // `acp.rs`). Strip any stale `~/.claude.json` copy first so claude-code-acp
     // (which also reads user config) doesn't load the same tools a second time.
     unregister_mcp_server();
-    let (session, info) = SdkAcpSession::connect(&agent_id, model).await?;
+    let (session, info) = SdkAcpSession::connect(
+        &agent_id,
+        model,
+        state.agent_permissions.clone(),
+        state.agent_perm_seq.clone(),
+    )
+    .await?;
     if let Ok(mut c) = state.agent_canceller.lock() {
         *c = Some(session.canceller());
     }
@@ -102,6 +108,24 @@ pub async fn agent_set_mode(state: State<'_, AppState>, mode_id: String) -> AppR
         .as_mut()
         .ok_or_else(|| AppError::internal("no agent connected"))?;
     session.set_mode(mode_id).await
+}
+
+/// Reply to a harness permission prompt the panel surfaced (the agent's `Default`/
+/// `Accept Edits` modes ask before the harness writes files or runs commands).
+/// `option_id` is the chosen option's id, `None` denies. Resolves the request the ACP
+/// permission handler is awaiting.
+#[tauri::command]
+pub fn agent_respond_permission(
+    state: State<'_, AppState>,
+    id: u32,
+    option_id: Option<String>,
+) -> AppResult<()> {
+    if let Ok(mut m) = state.agent_permissions.lock() {
+        if let Some(tx) = m.remove(&id) {
+            let _ = tx.send(option_id);
+        }
+    }
+    Ok(())
 }
 
 /// Drive one user turn, streaming updates/intents to the given channels. `context`

@@ -167,4 +167,27 @@ pub enum AgentSessionUpdate {
     Error {
         message: String,
     },
+    /// The harness asked permission to use one of ITS OWN tools (file write, shell, …)
+    /// that isn't auto-handled by the current mode. The panel renders a card with the
+    /// `options` and replies via `agent_respond_permission`. Mercek's read-only ECS
+    /// tools never reach here — they're auto-approved.
+    #[serde(rename_all = "camelCase")]
+    PermissionRequest {
+        id: u32,
+        title: String,
+        /// The tool kind the harness reported (e.g. "edit", "execute"), lower-cased.
+        kind: Option<String>,
+        options: Vec<PermissionChoice>,
+    },
+}
+
+/// One choice the harness offered for a permission prompt. `allow` distinguishes the
+/// allow options from the reject ones so the panel can style/order them.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../src/types/generated/")]
+pub struct PermissionChoice {
+    pub id: String,
+    pub label: String,
+    pub allow: bool,
 }

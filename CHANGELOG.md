@@ -25,6 +25,22 @@ All notable changes to Mercek are documented here. The format is based on
 - The agent model is now picked from a per-provider dropdown (with a "custom…" escape for
   any other id) instead of typed by hand.
 
+### Security
+
+- Agent markdown no longer loads remote images, and a restrictive Content-Security-Policy
+  now backstops the webview — closing a zero-click data-exfiltration vector where a
+  prompt-injected agent could beacon out AWS data via a markdown image. (Thanks to Jason
+  Cumberland for the disclosure.)
+- The connected harness's own file-write / shell permission prompts are now surfaced to
+  you to approve or deny, honoring the session mode (Bypass approves automatically; reads
+  are auto-approved), instead of being auto-approved — closing a prompt-injection path to
+  local file writes / command execution.
+- The Claude Code adapter is pinned to a version of `@zed-industries/claude-code-acp`
+  rather than fetching the latest on each run.
+- The `mercek --mcp` tool subprocess now receives only an allowlist of environment
+  variables (HOME / PATH / AWS_* / XDG_* / proxy / TLS) instead of the full environment,
+  so unrelated secrets in the launching shell don't leak into it.
+
 ## [0.2.0] - 2026-06-04
 
 ### Added

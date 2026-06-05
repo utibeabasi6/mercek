@@ -35,9 +35,23 @@ pub const WRITE_COMMANDS: &[&str] = &[
     "scale_service",
     "update_service",
     "force_deploy",
+    "enable_exec",
+    "deploy_image",
+    "create_service",
+    "delete_service",
+    "create_cluster",
+    "delete_cluster",
     "stop_task",
     "run_task",
     "register_revision",
+    "register_task_def",
+    "deregister_task_def",
+    // ECS Exec opens an interactive shell *inside* a running container — must never be
+    // reachable from the agent.
+    "exec_start",
+    "exec_write",
+    "exec_resize",
+    "exec_stop",
     "set_scopes",
     "reveal_secret",
 ];

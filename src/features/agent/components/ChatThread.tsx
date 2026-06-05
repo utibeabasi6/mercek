@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Spinner } from "@/components/ui/Spinner";
 import { Select } from "@/components/ui/Select";
 import { Send, Square, Wrench } from "lucide-react";
 import { ErrorBanner } from "@/components/ui/StateView";
 import { Markdown } from "@/components/ui/Markdown";
+import { invoke } from "@/lib/tauri";
 import type { ThreadItem } from "@/features/agent/api";
 import type { AgentMode, AgentSessionUpdate } from "@/types";
 
@@ -108,9 +109,63 @@ function UpdateRow({ u }: { u: AgentSessionUpdate }) {
       return <div className="mx-auto my-3 h-px w-full bg-border/60" aria-hidden />;
     case "error":
       return <div className="my-1 break-words text-[12px] text-err">⚠ {u.message}</div>;
+    case "permissionRequest":
+      return <PermissionCard u={u} />;
     default:
       return null;
   }
+}
+
+// The harness asked to use one of its own tools (file write / shell / …) in a mode that
+// requires asking. The user decides here; Mercek's read-only ECS tools never prompt.
+function PermissionCard({
+  u,
+}: {
+  u: Extract<AgentSessionUpdate, { type: "permissionRequest" }>;
+}) {
+  const [chosen, setChosen] = useState<string | null>(null);
+  const respond = (optionId: string | null, label: string) => {
+    setChosen(label);
+    void invoke("agent_respond_permission", { id: u.id, optionId });
+  };
+  return (
+    <div className="my-1.5 rounded-md border border-warn/40 bg-warn/10 px-3 py-2 text-[12px]">
+      <div className="flex items-start gap-2">
+        <span className="mt-0.5 shrink-0 text-warn">●</span>
+        <span className="min-w-0 break-words text-fg">
+          The agent wants to <span className="text-fg-dim">{u.title}</span>
+          {u.kind ? ` · ${u.kind}` : ""}
+        </span>
+      </div>
+      {chosen ? (
+        <div className="mt-1.5 pl-4 text-fg-muted">→ {chosen}</div>
+      ) : (
+        <div className="mt-2 flex flex-wrap gap-2 pl-4">
+          {u.options.map((o) => (
+            <button
+              key={o.id}
+              type="button"
+              onClick={() => respond(o.id, o.label)}
+              className={
+                o.allow
+                  ? "rounded border border-accent bg-accent px-2 py-0.5 text-bg hover:opacity-90"
+                  : "rounded border border-border px-2 py-0.5 text-fg-dim hover:border-err hover:text-err"
+              }
+            >
+              {o.label}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => respond(null, "denied")}
+            className="rounded px-2 py-0.5 text-fg-muted hover:text-fg"
+          >
+            dismiss
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function ChatThread({
@@ -164,6 +219,22 @@ export function ChatThread({
     setText("");
   };
 
+  // Recompute render groups only when the thread changes — not on every keystroke
+  // in the composer or `busy` toggle.
+  const groups = useMemo(() => groupThread(thread), [thread]);
+
+  // Surface only the modes worth choosing — Default (asks before write/shell) and
+  // Bypass Permissions (power-user opt-out). The harness still has the rest (Accept
+  // Edits / Plan Mode / Don't Ask); they're just not listed.
+  const shownModes = useMemo(
+    () =>
+      modes.filter((m) => {
+        const s = `${m.id} ${m.name}`.toLowerCase();
+        return s.includes("default") || s.includes("bypass");
+      }),
+    [modes],
+  );
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div
@@ -197,7 +268,7 @@ export function ChatThread({
             </div>
           </div>
         )}
-        {groupThread(thread).map((g) =>
+        {groups.map((g) =>
           g.kind === "user" ? (
             <div key={g.key} className="my-2 flex justify-end">
               <div className="max-w-[85%] whitespace-pre-wrap break-words rounded-lg rounded-br-sm bg-accent/15 px-2.5 py-1.5 text-fg ring-1 ring-accent/30">
@@ -248,13 +319,13 @@ export function ChatThread({
             className="max-h-40 min-h-[40px] w-full resize-none bg-transparent px-3 py-2 text-fg outline-none placeholder:text-fg-muted"
           />
           <div className="flex items-center gap-2 px-2 pb-1.5">
-            {modes.length > 0 && (
+            {shownModes.length > 0 && (
               <div className="min-w-0 max-w-[60%]">
                 <Select
                   value={currentMode ?? ""}
                   onChange={onSetMode}
                   placeholder="Default"
-                  options={modes.map((m) => ({ value: m.id, label: m.name }))}
+                  options={shownModes.map((m) => ({ value: m.id, label: m.name }))}
                 />
               </div>
             )}

@@ -245,9 +245,22 @@ export function useAgentSession() {
       setBusy(true);
       setError(null);
       setThread((t) => [...t, { role: "user", text: trimmed }]);
-      const updateChan = createChannel<AgentSessionUpdate>((m) =>
-        setThread((t) => [...t, { role: "agent", update: m }]),
-      );
+      // Coalesce the streamed chunks: buffer them and flush at ~25fps. A fast token
+      // stream would otherwise append + re-render + re-parse the growing markdown on
+      // every chunk (O(n²) over a turn) and stutter; batching caps that to the frame
+      // rate. Order is preserved (FIFO), and the `finally` flush drains the tail.
+      const buf: AgentSessionUpdate[] = [];
+      let timer: ReturnType<typeof setTimeout> | null = null;
+      const flush = () => {
+        timer = null;
+        if (buf.length === 0) return;
+        const batch = buf.splice(0, buf.length);
+        setThread((t) => [...t, ...batch.map((u): ThreadItem => ({ role: "agent", update: u }))]);
+      };
+      const updateChan = createChannel<AgentSessionUpdate>((m) => {
+        buf.push(m);
+        if (timer === null) timer = setTimeout(flush, 40);
+      });
       const intentChan = createChannel<AgentIntent>(onIntent);
       try {
         await invoke("agent_prompt", {
@@ -259,6 +272,8 @@ export function useAgentSession() {
       } catch (e) {
         setError(errText(e));
       } finally {
+        if (timer !== null) clearTimeout(timer);
+        flush();
         setBusy(false);
       }
     },

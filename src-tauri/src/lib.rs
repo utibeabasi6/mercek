@@ -63,6 +63,7 @@ pub fn run() {
             commands::agent::agent_list,
             commands::agent::agent_connect,
             commands::agent::agent_set_mode,
+            commands::agent::agent_respond_permission,
             commands::agent::agent_prompt,
             commands::agent::agent_cancel,
             commands::agent::agent_disconnect,

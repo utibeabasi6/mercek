@@ -59,6 +59,7 @@ export type { NavigateTarget } from "./generated/NavigateTarget";
 export type { NetworkBinding } from "./generated/NetworkBinding";
 export type { NetworkConfiguration } from "./generated/NetworkConfiguration";
 export type { Networking } from "./generated/Networking";
+export type { PermissionChoice } from "./generated/PermissionChoice";
 export type { NetworkOptions } from "./generated/NetworkOptions";
 export type { Vpc } from "./generated/Vpc";
 export type { Subnet } from "./generated/Subnet";

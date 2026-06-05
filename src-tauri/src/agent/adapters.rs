@@ -22,9 +22,12 @@ pub const ADAPTERS: &[Adapter] = &[
         id: "claude-code",
         name: "Claude Code",
         bin: "claude",
-        // Like Zed, run the ACP adapter via npx so it's fetched on demand rather
-        // than requiring a global install (the adapter vendors the Claude Code CLI).
-        acp_command: "npx -y @zed-industries/claude-code-acp",
+        // Run the ACP adapter via npx so it's fetched on demand rather than requiring a
+        // global install. Pinned to an exact, audited version (not a floating tag) so a
+        // future compromised/typosquatted publish can't be pulled in on the next run —
+        // bump deliberately after vetting. (Upstream has since renamed this package to
+        // @agentclientprotocol/claude-agent-acp; migrate when revisiting.)
+        acp_command: "npx -y @zed-industries/claude-code-acp@0.16.2",
         model_env: Some("ANTHROPIC_MODEL"),
         install_hint: "needs Node/npx (Claude Code already implies it); the adapter is fetched on first run",
     },

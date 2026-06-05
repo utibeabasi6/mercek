@@ -21,7 +21,17 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": {
+        "default-src": "'self'",
+        "script-src": "'self'",
+        "style-src": "'self' 'unsafe-inline'",
+        "font-src": "'self' data:",
+        "img-src": "'self' data: blob:",
+        "connect-src": "'self' ipc: http://ipc.localhost ws://localhost:1420 ws://localhost:1421",
+        "object-src": "'none'",
+        "base-uri": "'self'",
+        "frame-src": "'none'"
+      }
     }
   },
   "bundle": {
@@ -41,7 +51,7 @@
       "endpoints": [
         "https://github.com/utibeabasi6/mercek/releases/latest/download/latest.json"
       ],
-      "pubkey": "TAURI_SIGNER_PUBLIC_KEY",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDkwNkUxODQwQjAxNTE4RTcKUldUbkdCV3dRQmh1a0xRblZyT1lseC9Ea2lPZDRYcUJLSnVqbzYwbUlqd0xxMHVkckJHdGpVM0gK",
       "windows": {
         "installMode": "passive"
       }

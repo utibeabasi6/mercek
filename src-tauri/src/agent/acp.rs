@@ -8,14 +8,15 @@
 //! the per-turn response/stop-reason is returned over a oneshot.
 
 use std::str::FromStr;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{Arc, Mutex as StdMutex};
 
 use agent_client_protocol::schema::{
     CancelNotification, ContentBlock, ContentChunk, EnvVariable, McpServer, McpServerStdio,
-    NewSessionRequest, RequestPermissionOutcome, RequestPermissionRequest,
-    RequestPermissionResponse, SelectedPermissionOutcome, SessionId, SessionModeId,
-    SessionNotification, SessionUpdate, SetSessionModeRequest,
+    NewSessionRequest, PermissionOptionId, PermissionOptionKind, RequestPermissionOutcome,
+    RequestPermissionRequest, RequestPermissionResponse, SelectedPermissionOutcome, SessionId,
+    SessionModeId, SessionNotification, SessionUpdate, SetSessionModeRequest, ToolKind,
 };
 use agent_client_protocol::util::MatchDispatch;
 use agent_client_protocol::{
@@ -26,7 +27,7 @@ use tokio::sync::{mpsc, oneshot};
 
 use crate::agent::mcp::SharedSink;
 use crate::agent::session::{AcpSession, AgentSink};
-use crate::domain::{AgentMode, AgentSessionUpdate, ConnectInfo, ToolCallStatus};
+use crate::domain::{AgentMode, AgentSessionUpdate, ConnectInfo, PermissionChoice, ToolCallStatus};
 use crate::error::{AppError, AppResult};
 
 /// Map one streamed ACP session update onto a panel update; returns true if it
@@ -85,10 +86,41 @@ pub struct SdkAcpSession {
     /// The current turn's sink, shared with the MCP tool handlers so navigate /
     /// propose reach the live channel. Set before each prompt.
     current_sink: SharedSink,
+    /// The harness's current ACP mode id (e.g. "default", "bypassPermissions"). The
+    /// permission handler reads it to decide auto-approve / ask / deny; `set_mode`
+    /// keeps it in sync.
+    current_mode: Arc<StdMutex<Option<String>>>,
 }
 
 fn acp_to_app(e: agent_client_protocol::Error) -> AppError {
     AppError::internal(format!("agent: {e}"))
+}
+
+/// Env vars forwarded to the spawned `mercek --mcp` server: only what it needs to find
+/// `~/.aws` and make AWS calls. Everything else (unrelated secrets in the launching
+/// shell) is dropped so it can't leak into the child process.
+fn forward_to_mcp(key: &str) -> bool {
+    const EXACT: &[&str] = &[
+        "HOME",
+        "USERPROFILE",
+        "PATH",
+        "TMPDIR",
+        "TMP",
+        "TEMP",
+        "LANG",
+        "HTTP_PROXY",
+        "HTTPS_PROXY",
+        "NO_PROXY",
+        "http_proxy",
+        "https_proxy",
+        "no_proxy",
+        "SSL_CERT_FILE",
+        "SSL_CERT_DIR",
+    ];
+    EXACT.contains(&key)
+        || key.starts_with("AWS_")
+        || key.starts_with("XDG_")
+        || key.starts_with("LC_")
 }
 
 impl SdkAcpSession {
@@ -98,6 +130,8 @@ impl SdkAcpSession {
     pub async fn connect(
         agent_id: &str,
         model: Option<String>,
+        permissions: Arc<StdMutex<HashMap<u32, oneshot::Sender<Option<String>>>>>,
+        perm_seq: Arc<AtomicU32>,
     ) -> AppResult<(Self, ConnectInfo)> {
         let adapter = crate::agent::adapters::find(agent_id)
             .ok_or_else(|| AppError::internal(format!("unknown agent: {agent_id}")))?;
@@ -131,6 +165,12 @@ impl SdkAcpSession {
 
         let (cmd_tx, mut cmd_rx) = mpsc::unbounded_channel::<Cmd>();
         let current_sink: SharedSink = Arc::new(StdMutex::new(None));
+        let current_mode: Arc<StdMutex<Option<String>>> = Arc::new(StdMutex::new(None));
+        // Clones moved into the session task's permission handler.
+        let perm_sink = current_sink.clone();
+        let perm_mode = current_mode.clone();
+        let perm_map = permissions;
+        let perm_seq2 = perm_seq;
 
         // The session task signals `Ok(ConnectInfo)` (with the harness's modes) once
         // the session is established; if the harness fails to spawn/initialize first,
@@ -147,11 +187,14 @@ impl SdkAcpSession {
         let exe = std::env::current_exe().map_err(|e| {
             AppError::internal(format!("can't locate the mercek binary for the agent's tools: {e}"))
         })?;
-        // The SDK spawns the MCP server with ONLY the env we pass — an empty env
-        // means it can't find `$HOME/.aws`, so `list_scopes` comes back empty and the
-        // agent concludes "no profiles." Forward our full environment so the spawned
-        // `mercek --mcp` reads AWS (profiles, region, SSO cache) exactly as we do.
+        // The SDK spawns the MCP server with ONLY the env we pass. Forward an ALLOWLIST —
+        // just what `mercek --mcp` needs to resolve `~/.aws` and make AWS calls (HOME,
+        // PATH, AWS_*/XDG_*, proxy + TLS, locale) — rather than the whole environment, so
+        // unrelated secrets in the launching shell (GITHUB_TOKEN, other API keys, …) don't
+        // leak into a second process's env. (AWS creds in `AWS_*` are forwarded by design:
+        // the child is our own read-only binary and needs them for env-based auth.)
         let mut mcp_env: Vec<EnvVariable> = std::env::vars()
+            .filter(|(k, _)| forward_to_mcp(k))
             .map(|(k, v)| EnvVariable::new(k, v))
             .collect();
         // Where the subprocess sends navigate/propose intents back to this app, and
@@ -176,12 +219,98 @@ impl SdkAcpSession {
                 .builder()
                 .on_receive_request(
                     async move |req: RequestPermissionRequest, responder, _cx| {
-                        // Read-only surface: approve the agent's permission prompts.
-                        match req.options.first().map(|o| o.option_id.clone()) {
+                        // This prompt is for the HARNESS's OWN tools (file write/delete/shell);
+                        // Mercek's read-only ECS tools never reach here. Honor the session
+                        // mode: Bypass approves everything; reads/think/search auto-approve;
+                        // "Accept Edits" auto-approves edits; otherwise a host-mutating tool
+                        // (Edit/Delete/Move/Execute) is surfaced to the user, who decides.
+                        let mode = perm_mode
+                            .lock()
+                            .ok()
+                            .and_then(|g| g.clone())
+                            .unwrap_or_default()
+                            .to_lowercase();
+                        let kind = req.tool_call.fields.kind;
+                        // Decide ONLY from the tool kind, never the title: the title is
+                        // free-form text the model controls, so keying off it (e.g. a
+                        // `contains("mercek")` allowlist) would let a write tool titled to
+                        // look like a read slip through. Auto-approve only the clearly-safe
+                        // read kinds; anything else — file write / shell, or an unset/Other
+                        // kind — is surfaced to the user.
+                        let safe_read =
+                            matches!(kind, Some(ToolKind::Read | ToolKind::Search | ToolKind::Think));
+                        let is_reject = |k: &PermissionOptionKind| {
+                            matches!(
+                                k,
+                                PermissionOptionKind::RejectOnce | PermissionOptionKind::RejectAlways
+                            )
+                        };
+                        let is_once = |k: &PermissionOptionKind| {
+                            matches!(
+                                k,
+                                PermissionOptionKind::RejectOnce | PermissionOptionKind::AllowOnce
+                            )
+                        };
+                        let pick = |reject: bool| {
+                            req.options
+                                .iter()
+                                .find(|o| is_reject(&o.kind) == reject && is_once(&o.kind))
+                                .or_else(|| req.options.iter().find(|o| is_reject(&o.kind) == reject))
+                                .map(|o| o.option_id.clone())
+                        };
+                        let auto_approve = mode.contains("bypass")
+                            || safe_read
+                            || (matches!(kind, Some(ToolKind::Edit)) && mode.contains("accept"));
+
+                        let chosen: Option<PermissionOptionId> = if auto_approve {
+                            pick(false)
+                        } else if let Some(sink) = perm_sink.lock().ok().and_then(|g| g.clone()) {
+                            // Ask the user via an inline card and await their reply.
+                            let id = perm_seq2.fetch_add(1, Ordering::Relaxed);
+                            let (tx, rx) = oneshot::channel::<Option<String>>();
+                            if let Ok(mut m) = perm_map.lock() {
+                                m.insert(id, tx);
+                            }
+                            sink.update(AgentSessionUpdate::PermissionRequest {
+                                id,
+                                title: req
+                                    .tool_call
+                                    .fields
+                                    .title
+                                    .clone()
+                                    .unwrap_or_else(|| "use a tool".to_string()),
+                                kind: kind.map(|k| format!("{k:?}").to_lowercase()),
+                                options: req
+                                    .options
+                                    .iter()
+                                    .map(|o| PermissionChoice {
+                                        id: o.option_id.0.to_string(),
+                                        label: o.name.clone(),
+                                        allow: !is_reject(&o.kind),
+                                    })
+                                    .collect(),
+                            });
+                            let reply =
+                                tokio::time::timeout(std::time::Duration::from_secs(300), rx).await;
+                            if let Ok(mut m) = perm_map.lock() {
+                                m.remove(&id);
+                            }
+                            match reply {
+                                Ok(Ok(Some(s))) => req
+                                    .options
+                                    .iter()
+                                    .find(|o| o.option_id.0.as_ref() == s.as_str())
+                                    .map(|o| o.option_id.clone()),
+                                _ => None, // timeout / dismissed → deny
+                            }
+                        } else {
+                            // No live panel to ask → default-deny the mutation.
+                            pick(true)
+                        };
+
+                        match chosen {
                             Some(id) => responder.respond(RequestPermissionResponse::new(
-                                RequestPermissionOutcome::Selected(SelectedPermissionOutcome::new(
-                                    id,
-                                )),
+                                RequestPermissionOutcome::Selected(SelectedPermissionOutcome::new(id)),
                             )),
                             None => responder.respond(RequestPermissionResponse::new(
                                 RequestPermissionOutcome::Cancelled,
@@ -323,15 +452,21 @@ impl SdkAcpSession {
         });
 
         match tokio::time::timeout(std::time::Duration::from_secs(20), ready_rx).await {
-            Ok(Ok(Ok((info, conn, session_id)))) => Ok((
-                Self {
-                    cmd_tx,
-                    conn,
-                    session_id,
-                    current_sink,
-                },
-                info,
-            )),
+            Ok(Ok(Ok((info, conn, session_id)))) => {
+                if let Ok(mut g) = current_mode.lock() {
+                    *g = info.current_mode.clone();
+                }
+                Ok((
+                    Self {
+                        cmd_tx,
+                        conn,
+                        session_id,
+                        current_sink,
+                        current_mode,
+                    },
+                    info,
+                ))
+            }
             Ok(Ok(Err(e))) => Err(e),
             Ok(Err(_)) => Err(AppError::internal(format!(
                 "{name} closed the connection before it was ready — is `{acp_cmd}` installed? {hint}"
@@ -362,6 +497,9 @@ impl AcpSession for SdkAcpSession {
     }
 
     async fn set_mode(&mut self, mode_id: String) -> AppResult<()> {
+        if let Ok(mut g) = self.current_mode.lock() {
+            *g = Some(mode_id.clone());
+        }
         let (done, done_rx) = oneshot::channel();
         self.cmd_tx
             .send(Cmd::SetMode { mode_id, done })

@@ -1,10 +1,43 @@
+import { memo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Components } from "react-markdown";
 
-// Render agent output as markdown with theme-consistent styling. react-markdown
-// ignores raw HTML by default, so this is safe for (untrusted) LLM text — no
-// dangerouslySetInnerHTML. GFM adds tables, strikethrough, task lists, autolinks.
+// Render agent output as markdown with theme-consistent styling, hardened because the
+// text is untrusted: it's LLM/agent output, and the agent reads attacker-influenceable
+// ECS fields (service/cluster/task names, tags, CloudWatch log lines) — a prompt-injection
+// channel. Defences:
+//   • Raw HTML is ignored (react-markdown default — no dangerouslySetInnerHTML).
+//   • Remote images never load: the `img` override renders inert alt text instead of an
+//     <img src>, which the webview would otherwise auto-GET on render — a zero-click
+//     data-exfiltration beacon for the AWS state the agent just read.
+//   • safeUrlTransform restricts URLs to http/https/mailto/relative as a backstop for
+//     link nodes (and blocks protocol-relative "//host").
+// GFM adds tables, strikethrough, task lists, autolinks.
+
+// Allow only safe, human-navigable URL schemes; same-document relative URLs pass through.
+// Protocol-relative ("//host") and non-allowlisted schemes (javascript:, data:, …) become
+// "" so react-markdown emits no href/src. Exported for unit testing.
+export function safeUrlTransform(url: string): string {
+  // "//host" carries no scheme but resolves to a remote origin — block outright.
+  if (url.startsWith("//")) return "";
+  const colon = url.indexOf(":");
+  if (colon === -1) return url; // no scheme → relative reference
+  // A colon after the first /, ?, or # isn't a scheme delimiter — it's a relative path.
+  const slash = url.indexOf("/");
+  const query = url.indexOf("?");
+  const hash = url.indexOf("#");
+  if (
+    (slash !== -1 && colon > slash) ||
+    (query !== -1 && colon > query) ||
+    (hash !== -1 && colon > hash)
+  ) {
+    return url;
+  }
+  const scheme = url.slice(0, colon).toLowerCase();
+  return scheme === "http" || scheme === "https" || scheme === "mailto" ? url : "";
+}
+
 const components: Components = {
   p: ({ children }) => (
     <p className="my-1.5 break-words leading-relaxed first:mt-0 last:mb-0">{children}</p>
@@ -30,6 +63,13 @@ const components: Components = {
     >
       {children}
     </a>
+  ),
+  // Never emit <img src> from a model-supplied URL — the webview auto-GETs it on render
+  // (a zero-click exfil beacon). Show the alt text inert instead, no network request.
+  img: ({ alt, title }) => (
+    <span className="italic text-fg-muted" title={title ?? undefined}>
+      {alt ?? "image"}
+    </span>
   ),
   strong: ({ children }) => <strong className="font-semibold text-fg">{children}</strong>,
   em: ({ children }) => <em className="italic">{children}</em>,
@@ -63,12 +103,18 @@ const components: Components = {
   td: ({ children }) => <td className="border border-border px-2 py-1 align-top">{children}</td>,
 };
 
-export function Markdown({ children }: { children: string }) {
+// Memoized: when a new chunk streams in, only the still-growing block re-parses; the
+// already-rendered blocks above it (same `children` string) skip re-parsing.
+export const Markdown = memo(function Markdown({ children }: { children: string }) {
   return (
     <div className="min-w-0 text-[13px] text-fg">
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={components}
+        urlTransform={safeUrlTransform}
+      >
         {children}
       </ReactMarkdown>
     </div>
   );
-}
+});

@@ -1,6 +1,6 @@
 [package]
 name = "mercek"
-version = "0.2.0"
+version = "0.3.0"
 description = "A desktop IDE for AWS ECS"
 authors = ["Utibeabasi Umanah <utibeabasiumanah6@gmail.com>"]
 edition = "2021"
@@ -32,6 +32,10 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
+# In-app auto-update (checks GitHub releases, verifies a minisign signature) and the
+# process plugin so we can relaunch into the freshly-installed version.
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 ts-rs = "12"

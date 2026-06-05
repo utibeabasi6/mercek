@@ -5,16 +5,14 @@ import {
   useTaskDefinitionRevisions,
 } from "@/features/discovery/api";
 import { useCreateService } from "@/features/services/api";
+import {
+  NetworkConfigFields,
+  type NetworkConfig,
+} from "@/features/tasks/components/NetworkConfigFields";
 import { Select } from "@/components/ui/Select";
 import { appErrorMessage } from "@/lib/errors";
 import { arnName } from "@/lib/arn";
 import type { AppError, Scope } from "@/types";
-
-const parseList = (s: string) =>
-  s
-    .split(/[,\s]+/)
-    .map((x) => x.trim())
-    .filter(Boolean);
 
 export function CreateServiceDialog({
   scope,
@@ -32,9 +30,12 @@ export function CreateServiceDialog({
   const [name, setName] = useState("");
   const [desired, setDesired] = useState(1);
   const [launchType, setLaunchType] = useState("FARGATE");
-  const [subnetsStr, setSubnetsStr] = useState("");
-  const [sgsStr, setSgsStr] = useState("");
-  const [assignPublicIp, setAssignPublicIp] = useState(false);
+  const [net, setNet] = useState<NetworkConfig>({
+    subnets: [],
+    securityGroups: [],
+    assignPublicIp: false,
+    ready: false,
+  });
   const [useLb, setUseLb] = useState(false);
   const [targetGroupArn, setTargetGroupArn] = useState("");
   const [lbContainer, setLbContainer] = useState("");
@@ -47,15 +48,13 @@ export function CreateServiceDialog({
   const containers = td.data?.containerDefs ?? [];
   const lbContainerName = lbContainer || containers[0]?.name || "";
   const isFargate = launchType === "FARGATE";
-  const subnets = parseList(subnetsStr);
 
-  const lbValid =
-    !useLb || (!!targetGroupArn.trim() && !!lbContainerName && Number(lbPort) > 0);
+  const lbValid = !useLb || (!!targetGroupArn.trim() && !!lbContainerName && Number(lbPort) > 0);
   const canCreate =
     !!name.trim() &&
     !!selectedRev &&
     desired >= 0 &&
-    (!isFargate || subnets.length > 0) &&
+    (!isFargate || net.ready) &&
     lbValid &&
     !create.isPending;
 
@@ -67,9 +66,9 @@ export function CreateServiceDialog({
         taskDefinition: selectedRev,
         desiredCount: desired,
         launchType,
-        subnets,
-        securityGroups: parseList(sgsStr),
-        assignPublicIp,
+        subnets: isFargate ? net.subnets : [],
+        securityGroups: isFargate ? net.securityGroups : [],
+        assignPublicIp: isFargate ? net.assignPublicIp : false,
         targetGroupArn: useLb ? targetGroupArn.trim() : undefined,
         containerName: useLb ? lbContainerName : undefined,
         containerPort: useLb ? Number(lbPort) : undefined,
@@ -80,12 +79,12 @@ export function CreateServiceDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh]"
+      className="fixed inset-0 z-50 flex items-start justify-center pt-[8vh]"
       onMouseDown={onClose}
     >
       <div className="absolute inset-0 bg-[var(--overlay)]" />
       <div
-        className="relative max-h-[80vh] w-[560px] max-w-[92vw] overflow-auto rounded-lg border border-border-strong bg-bg-elev shadow-2xl"
+        className="relative max-h-[84vh] w-[560px] max-w-[92vw] overflow-auto rounded-lg border border-border-strong bg-bg-elev shadow-2xl"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="border-b border-border px-4 py-2.5 text-fg">
@@ -147,34 +146,7 @@ export function CreateServiceDialog({
             </Row>
           </div>
 
-          {isFargate && (
-            <>
-              <Row label="subnets">
-                <input
-                  value={subnetsStr}
-                  onChange={(e) => setSubnetsStr(e.target.value)}
-                  placeholder="subnet-… , subnet-…"
-                  className="min-w-0 flex-1 rounded border border-border bg-bg-elev-2 px-2 py-1 text-fg outline-none focus:border-accent"
-                />
-              </Row>
-              <Row label="security groups">
-                <input
-                  value={sgsStr}
-                  onChange={(e) => setSgsStr(e.target.value)}
-                  placeholder="sg-… , sg-…"
-                  className="min-w-0 flex-1 rounded border border-border bg-bg-elev-2 px-2 py-1 text-fg outline-none focus:border-accent"
-                />
-              </Row>
-              <label className="flex items-center gap-2 pl-[128px] text-fg-dim">
-                <input
-                  type="checkbox"
-                  checked={assignPublicIp}
-                  onChange={(e) => setAssignPublicIp(e.target.checked)}
-                />
-                assign public IP
-              </label>
-            </>
-          )}
+          {isFargate && <NetworkConfigFields scope={scope} cluster={cluster} onChange={setNet} />}
 
           <details className="rounded border border-border">
             <summary
@@ -185,11 +157,7 @@ export function CreateServiceDialog({
             </summary>
             <div className="flex flex-col gap-2 border-t border-border p-3">
               <label className="flex items-center gap-2 text-fg-dim">
-                <input
-                  type="checkbox"
-                  checked={useLb}
-                  onChange={(e) => setUseLb(e.target.checked)}
-                />
+                <input type="checkbox" checked={useLb} onChange={(e) => setUseLb(e.target.checked)} />
                 attach to a target group
               </label>
               {useLb && (

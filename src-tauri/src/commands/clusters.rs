@@ -16,3 +16,14 @@ pub async fn create_cluster(
     let clients = state.pool.get(&scope).await?;
     mutate::create_cluster(&clients.ecs_client, &scope.profile, &name, container_insights).await
 }
+
+/// Delete a cluster (must have no active services/tasks/instances). Write path — real AWS only.
+#[tauri::command]
+pub async fn delete_cluster(
+    state: State<'_, AppState>,
+    scope: Scope,
+    name: String,
+) -> AppResult<()> {
+    let clients = state.pool.get(&scope).await?;
+    mutate::delete_cluster(&clients.ecs_client, &scope.profile, &name).await
+}

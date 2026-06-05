@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useShell, type Tab } from "@/app/shell";
 import { useClusterResources, useTaskDefinition } from "@/features/discovery/api";
-import { useEni, useStopTask } from "@/features/tasks/api";
+import { useEni, useStopTask, useDeregisterTaskDef } from "@/features/tasks/api";
 import { RegisterDialog } from "@/features/tasks/components/RegisterDialog";
 import { SubTabs, Field, Section } from "@/components/ui/Tabs";
 import { StatusBadge } from "@/components/ui/Badge";
@@ -41,8 +41,10 @@ export function TaskDetail({ tab }: { tab: Tab }) {
   const { data: eni } = useEni(tab.scope, task?.networking?.eniId, sub === "networking");
   const [confirmStop, setConfirmStop] = useState(false);
   const [registering, setRegistering] = useState(false);
+  const [confirmDeregister, setConfirmDeregister] = useState(false);
   const [reason, setReason] = useState("");
   const stop = useStopTask(tab.scope, tab.clusterName ?? "");
+  const deregister = useDeregisterTaskDef(tab.scope);
 
   if (!task) {
     if (isLoading) return <LoadingState label="loading task…" />;
@@ -132,6 +134,29 @@ export function TaskDetail({ tab }: { tab: Tab }) {
 
       {registering && taskDef && (
         <RegisterDialog scope={tab.scope} taskDef={taskDef} onClose={() => setRegistering(false)} />
+      )}
+
+      {confirmDeregister && taskDef && (
+        <ConfirmDialog
+          title={
+            <>
+              deregister <span className="text-accent">{taskDefShort(taskDef.arn)}</span>
+            </>
+          }
+          confirmLabel="deregister"
+          danger
+          busy={deregister.isPending}
+          errorMessage={
+            deregister.isError ? appErrorMessage(deregister.error as unknown as AppError) : undefined
+          }
+          onConfirm={() =>
+            deregister.mutate(taskDef.arn, { onSuccess: () => setConfirmDeregister(false) })
+          }
+          onClose={() => setConfirmDeregister(false)}
+        >
+          Marks this task-definition revision INACTIVE. Tasks already running on it keep running —
+          you just can't start new ones from it.
+        </ConfirmDialog>
       )}
 
       <SubTabs
@@ -231,6 +256,13 @@ export function TaskDetail({ tab }: { tab: Tab }) {
                   className="rounded border border-border px-2 py-1 text-fg-dim hover:border-border-strong hover:text-fg"
                 >
                   register new revision
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmDeregister(true)}
+                  className="rounded border border-border px-2 py-1 text-fg-dim hover:border-err hover:text-err"
+                >
+                  deregister
                 </button>
               </div>
             )}

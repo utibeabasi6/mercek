@@ -20,6 +20,7 @@ export const qk = {
     ["taskDefinitions", ...scopeKey(scope), family] as const,
   taskDefFamilies: (scope: Scope) => ["taskDefFamilies", ...scopeKey(scope)] as const,
   eni: (scope: Scope, eniId: string) => ["eni", ...scopeKey(scope), eniId] as const,
+  networkOptions: (scope: Scope) => ["networkOptions", ...scopeKey(scope)] as const,
   targetHealth: (scope: Scope, targetGroupArn: string) =>
     ["targetHealth", ...scopeKey(scope), targetGroupArn] as const,
   scaling: (scope: Scope, cluster: string, service: string) =>

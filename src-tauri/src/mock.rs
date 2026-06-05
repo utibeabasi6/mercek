@@ -290,6 +290,48 @@ pub fn eni_detail(eni_id: &str) -> EniDetail {
     }
 }
 
+pub fn network_options() -> NetworkOptions {
+    let vpc = "vpc-0f1e2d3c4b5a69788";
+    NetworkOptions {
+        vpcs: vec![Vpc {
+            id: vpc.into(),
+            cidr: Some("10.0.0.0/16".into()),
+            is_default: true,
+            name: Some("default".into()),
+        }],
+        subnets: vec![
+            Subnet {
+                id: "subnet-0a1b2c3d4e5f6a7b8".into(),
+                vpc_id: vpc.into(),
+                availability_zone: Some("us-east-1a".into()),
+                cidr: Some("10.0.1.0/24".into()),
+                name: Some("public-1a".into()),
+            },
+            Subnet {
+                id: "subnet-1b2c3d4e5f6a7b8c9".into(),
+                vpc_id: vpc.into(),
+                availability_zone: Some("us-east-1b".into()),
+                cidr: Some("10.0.2.0/24".into()),
+                name: Some("public-1b".into()),
+            },
+        ],
+        security_groups: vec![
+            SecurityGroup {
+                id: "sg-0e5d4c3b2a1908172".into(),
+                vpc_id: vpc.into(),
+                name: Some("default".into()),
+                description: Some("default VPC security group".into()),
+            },
+            SecurityGroup {
+                id: "sg-0a1b2c3d4e5f60718".into(),
+                vpc_id: vpc.into(),
+                name: Some("ecs-tasks".into()),
+                description: Some("ECS tasks".into()),
+            },
+        ],
+    }
+}
+
 pub fn log_lines(stream: &str, token: Option<String>) -> (Vec<LogEvent>, Option<String>) {
     const MSGS: [&str; 6] = [
         "GET /healthz 200 1ms",

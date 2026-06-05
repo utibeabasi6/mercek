@@ -1,10 +1,15 @@
 name: Release
 
 # Cut a release by pushing a version tag, e.g.:
-#   git tag v0.1.0 && git push origin v0.1.0
-# tauri-action builds the macOS bundles (.app + .dmg, per bundle.targets) and
-# attaches them to a DRAFT GitHub Release for the tag. Publish the draft when
-# you're ready. Manual dispatch is also supported for dry runs.
+#   git tag v0.2.0 && git push origin v0.2.0
+# tauri-action builds the bundles for macOS (universal .app + .dmg), Linux (.deb +
+# .AppImage), and Windows (.msi + NSIS .exe), generates the signed updater artifacts
+# + latest.json, and attaches everything to a DRAFT GitHub Release for the tag. Publish
+# the draft when ready — the updater's endpoint only serves a *published* release.
+#
+# Auto-update requires two repo secrets (generate the key with `pnpm tauri signer
+# generate`): TAURI_SIGNING_PRIVATE_KEY and TAURI_SIGNING_PRIVATE_KEY_PASSWORD. The
+# matching public key goes in src-tauri/tauri.conf.json under plugins.updater.pubkey.
 on:
   push:
     tags:
@@ -13,12 +18,25 @@ on:
 
 jobs:
   build:
-    name: Build (universal macOS)
+    name: Build (${{ matrix.platform }})
     permissions:
       contents: write
-    # One Apple Silicon runner builds a universal2 binary (Intel + Apple Silicon),
-    # so there's no scarce/deprecated macos-13 (Intel) runner to wait on.
-    runs-on: macos-14
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # One Apple Silicon runner builds a universal2 binary (Intel + Apple Silicon).
+          - platform: macos-14
+            args: "--target universal-apple-darwin"
+            rust-targets: "aarch64-apple-darwin,x86_64-apple-darwin"
+          # ubuntu-22.04 for a widely-compatible glibc.
+          - platform: ubuntu-22.04
+            args: ""
+            rust-targets: ""
+          - platform: windows-latest
+            args: ""
+            rust-targets: ""
+    runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v6
 
@@ -34,13 +52,28 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-apple-darwin, x86_64-apple-darwin
+          targets: ${{ matrix.rust-targets }}
+
+      - name: Install Linux build deps
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            build-essential \
+            file \
+            libxdo-dev \
+            libssl-dev
 
       - name: Cache cargo
         uses: swatinem/rust-cache@v2
         with:
           workspaces: src-tauri -> target
-          key: universal-apple-darwin
+          key: ${{ matrix.platform }}
 
       - name: Install JS deps
         # tauri-action runs the beforeBuildCommand (`pnpm build`) but does not
@@ -49,10 +82,11 @@ jobs:
 
       # Optional macOS signing + notarisation. Runs only when the secrets are set;
       # otherwise the build is unsigned (Gatekeeper warns on launch but still builds).
-      # The signing/notarisation vars are forwarded to the build step via $GITHUB_ENV
-      # ONLY when configured — passing an empty APPLE_SIGNING_IDENTITY makes Tauri try
-      # to sign with identity "" and fail.
+      # Passing an empty APPLE_SIGNING_IDENTITY makes Tauri try to sign with identity ""
+      # and fail, so the vars are forwarded to the build step via $GITHUB_ENV ONLY when
+      # configured.
       - name: Configure Apple signing (optional)
+        if: matrix.platform == 'macos-14'
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -72,7 +106,6 @@ jobs:
           security import cert.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k actions build.keychain
           rm -f cert.p12
-          # Only now that signing is configured, expose the vars to the build step.
           {
             echo "APPLE_SIGNING_IDENTITY=$SIGNING_IDENTITY"
             echo "APPLE_ID=$APPLE_ID"
@@ -85,18 +118,18 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Required for the updater artifacts (.sig + latest.json). Without these the
+          # build fails because tauri.conf.json sets bundle.createUpdaterArtifacts.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           # APPLE_* signing/notarisation vars are injected by the previous step via
-          # $GITHUB_ENV, and only when configured. Their absence here = unsigned build.
+          # $GITHUB_ENV, and only on macOS when configured.
         with:
-          # The Tauri project lives at the repo root (src-tauri/), so projectPath
-          # defaults to "." — no need to set it.
           tagName: ${{ github.ref_type == 'tag' && github.ref_name || 'v__VERSION__' }}
           releaseName: "Mercek ${{ github.ref_type == 'tag' && github.ref_name || 'v__VERSION__' }}"
           releaseBody: "See the [CHANGELOG](https://github.com/utibeabasi6/mercek/blob/main/CHANGELOG.md) for details."
           releaseDraft: true
           prerelease: false
-          # No auto-updater is configured yet. To enable it later: turn on the
-          # Tauri updater plugin, set TAURI_SIGNING_PRIVATE_KEY(/_PASSWORD)
-          # secrets, and flip this to true.
-          includeUpdaterJson: false
-          args: --target universal-apple-darwin
+          # Generates/merges latest.json (the updater manifest) across the matrix.
+          includeUpdaterJson: true
+          args: ${{ matrix.args }}

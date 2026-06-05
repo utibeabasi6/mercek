@@ -87,6 +87,19 @@ export function useDeployImage(scope: Scope, cluster: string) {
   });
 }
 
+// Delete a service (force = stop running tasks too), then reconcile the cluster + tree.
+export function useDeleteService(scope: Scope, cluster: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { service: string; force: boolean }) =>
+      invoke("delete_service", { scope, cluster, ...vars }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: qk.clusterResources(scope, cluster) });
+      void qc.invalidateQueries({ queryKey: qk.discovery.all() });
+    },
+  });
+}
+
 // Create a new service in the cluster, then reconcile the cluster's resources.
 export function useCreateService(scope: Scope, cluster: string) {
   const qc = useQueryClient();

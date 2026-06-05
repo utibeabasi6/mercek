@@ -14,3 +14,14 @@ export function useCreateCluster(scope: Scope) {
     },
   });
 }
+
+// Delete a cluster (must be empty), then refresh discovery.
+export function useDeleteCluster(scope: Scope) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (name: string) => invoke("delete_cluster", { scope, name }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: qk.discovery.all() });
+    },
+  });
+}

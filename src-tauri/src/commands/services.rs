@@ -141,6 +141,19 @@ pub async fn create_service(
     .await
 }
 
+/// Delete a service (force = delete even with running tasks). Write path — real AWS only.
+#[tauri::command]
+pub async fn delete_service(
+    state: State<'_, AppState>,
+    scope: Scope,
+    cluster: String,
+    service: String,
+    force: bool,
+) -> AppResult<Service> {
+    let clients = state.pool.get(&scope).await?;
+    mutate::delete_service(&clients.ecs_client, &scope.profile, &cluster, &service, force).await
+}
+
 #[tauri::command]
 pub async fn target_health(
     state: State<'_, AppState>,

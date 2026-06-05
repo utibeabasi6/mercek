@@ -14,6 +14,7 @@ import type {
   LogEvent,
   SecretRef,
   MetricSeries,
+  NetworkOptions,
   ResourceGraph,
   ScalingView,
   Scope,
@@ -108,6 +109,12 @@ type CommandMap = {
     args: { scope: Scope; name: string; containerInsights: boolean };
     result: Cluster;
   };
+  delete_service: {
+    args: { scope: Scope; cluster: string; service: string; force: boolean };
+    result: Service;
+  };
+  delete_cluster: { args: { scope: Scope; name: string }; result: void };
+  deregister_task_def: { args: { scope: Scope; arn: string }; result: void };
   stop_task: {
     args: { scope: Scope; cluster: string; task: string; reason?: string };
     result: Task;
@@ -208,6 +215,7 @@ type CommandMap = {
   exec_resize: { args: { session: number; rows: number; cols: number }; result: void };
   exec_stop: { args: { session: number }; result: void };
   describe_eni: { args: { scope: Scope; eniId: string }; result: EniDetail };
+  network_options: { args: { scope: Scope }; result: NetworkOptions };
   image_scan: {
     args: { scope: Scope; repository: string; reference: string };
     result: ImageScan;

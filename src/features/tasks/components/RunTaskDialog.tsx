@@ -6,17 +6,15 @@ import {
   useTaskDefinitionRevisions,
 } from "@/features/discovery/api";
 import { useRunTask } from "@/features/tasks/api";
+import {
+  NetworkConfigFields,
+  type NetworkConfig,
+} from "@/features/tasks/components/NetworkConfigFields";
 import { IconButton } from "@/components/ui/IconButton";
 import { Select } from "@/components/ui/Select";
 import { appErrorMessage } from "@/lib/errors";
 import { arnName } from "@/lib/arn";
 import type { AppError, Scope } from "@/types";
-
-const parseList = (s: string) =>
-  s
-    .split(/[,\s]+/)
-    .map((x) => x.trim())
-    .filter(Boolean);
 
 // Command override is argv split on whitespace (no shell quoting).
 const parseArgv = (s: string) => s.trim().split(/\s+/).filter(Boolean);
@@ -36,9 +34,12 @@ export function RunTaskDialog({
   const [taskDef, setTaskDef] = useState("");
   const [count, setCount] = useState(1);
   const [launchType, setLaunchType] = useState("FARGATE");
-  const [subnetsStr, setSubnetsStr] = useState("");
-  const [sgsStr, setSgsStr] = useState("");
-  const [assignPublicIp, setAssignPublicIp] = useState(false);
+  const [net, setNet] = useState<NetworkConfig>({
+    subnets: [],
+    securityGroups: [],
+    assignPublicIp: false,
+    ready: false,
+  });
   const [containerName, setContainerName] = useState("");
   const [commandStr, setCommandStr] = useState("");
   const [envRows, setEnvRows] = useState<{ key: string; value: string }[]>([]);
@@ -50,8 +51,7 @@ export function RunTaskDialog({
   const containers = td.data?.containerDefs ?? [];
   const overrideContainer = containerName || containers[0]?.name || "";
   const isFargate = launchType === "FARGATE";
-  const subnets = parseList(subnetsStr);
-  const canRun = !!selectedRev && (!isFargate || subnets.length > 0) && count >= 1;
+  const canRun = !!selectedRev && (!isFargate || net.ready) && count >= 1;
 
   const submit = () => {
     if (!canRun) return;
@@ -63,9 +63,9 @@ export function RunTaskDialog({
         taskDefinition: selectedRev,
         count,
         launchType,
-        subnets,
-        securityGroups: parseList(sgsStr),
-        assignPublicIp,
+        subnets: isFargate ? net.subnets : [],
+        securityGroups: isFargate ? net.securityGroups : [],
+        assignPublicIp: isFargate ? net.assignPublicIp : false,
         containerName: hasOverride ? overrideContainer : undefined,
         command,
         env,
@@ -76,12 +76,12 @@ export function RunTaskDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[12vh]"
+      className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh]"
       onMouseDown={onClose}
     >
       <div className="absolute inset-0 bg-[var(--overlay)]" />
       <div
-        className="relative w-[560px] max-w-[92vw] rounded-lg border border-border-strong bg-bg-elev shadow-2xl"
+        className="relative max-h-[82vh] w-[560px] max-w-[92vw] overflow-auto rounded-lg border border-border-strong bg-bg-elev shadow-2xl"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="border-b border-border px-4 py-2.5 text-fg">
@@ -136,32 +136,7 @@ export function RunTaskDialog({
           </div>
 
           {isFargate && (
-            <>
-              <Row label="subnets">
-                <input
-                  value={subnetsStr}
-                  onChange={(e) => setSubnetsStr(e.target.value)}
-                  placeholder="subnet-… , subnet-…"
-                  className="min-w-0 flex-1 rounded border border-border bg-bg-elev-2 px-2 py-1 text-fg outline-none focus:border-accent"
-                />
-              </Row>
-              <Row label="security groups">
-                <input
-                  value={sgsStr}
-                  onChange={(e) => setSgsStr(e.target.value)}
-                  placeholder="sg-… , sg-…"
-                  className="min-w-0 flex-1 rounded border border-border bg-bg-elev-2 px-2 py-1 text-fg outline-none focus:border-accent"
-                />
-              </Row>
-              <label className="flex items-center gap-2 pl-[136px] text-fg-dim">
-                <input
-                  type="checkbox"
-                  checked={assignPublicIp}
-                  onChange={(e) => setAssignPublicIp(e.target.checked)}
-                />
-                assign public IP
-              </label>
-            </>
+            <NetworkConfigFields scope={scope} cluster={cluster} onChange={setNet} />
           )}
 
           {selectedRev && (

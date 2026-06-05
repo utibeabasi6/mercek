@@ -44,6 +44,8 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .setup(|app| {
             let dir = app
                 .path()
@@ -88,11 +90,14 @@ pub fn run() {
             commands::services::enable_exec,
             commands::services::deploy_image,
             commands::services::create_service,
+            commands::services::delete_service,
             commands::clusters::create_cluster,
+            commands::clusters::delete_cluster,
             commands::tasks::stop_task,
             commands::tasks::run_task,
             commands::tasks::register_revision,
             commands::tasks::register_task_def,
+            commands::tasks::deregister_task_def,
             commands::metrics::service_metrics,
             commands::metrics::cluster_metrics,
             commands::metrics::alb_metrics,
@@ -104,6 +109,7 @@ pub fn run() {
             commands::exec::exec_resize,
             commands::exec::exec_stop,
             commands::tasks::describe_eni,
+            commands::tasks::network_options,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

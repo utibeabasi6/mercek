@@ -13,6 +13,17 @@ export function useEni(scope: Scope, eniId: string | undefined | null, enabled =
   });
 }
 
+// VPCs / subnets / security groups in the scope's region — the awsvpc network choices
+// for the run-task and create-service forms.
+export function useNetworkOptions(scope: Scope, enabled = true) {
+  return useQuery({
+    queryKey: qk.networkOptions(scope),
+    queryFn: () => invoke("network_options", { scope }),
+    enabled,
+    staleTime: 5 * 60_000,
+  });
+}
+
 // Write path: stop a task, then reconcile the cluster's resources.
 export function useStopTask(scope: Scope, cluster: string) {
   const qc = useQueryClient();
@@ -96,6 +107,18 @@ export function useRegisterTaskDef(scope: Scope) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (vars: RegisterTaskDefVars) => invoke("register_task_def", { scope, ...vars }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["taskDefinitions"] });
+      void qc.invalidateQueries({ queryKey: ["taskDefFamilies"] });
+    },
+  });
+}
+
+// Write path: deregister a task-def revision (marks it INACTIVE); refresh the pickers.
+export function useDeregisterTaskDef(scope: Scope) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (arn: string) => invoke("deregister_task_def", { scope, arn }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["taskDefinitions"] });
       void qc.invalidateQueries({ queryKey: ["taskDefFamilies"] });

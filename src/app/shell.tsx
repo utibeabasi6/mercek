@@ -38,7 +38,10 @@ type TabsAction =
   | { type: "open"; tab: Tab }
   | { type: "close"; id: string }
   | { type: "focus"; id: string }
-  | { type: "home" };
+  | { type: "home" }
+  | { type: "closeAll" }
+  | { type: "closeOthers"; id: string }
+  | { type: "closeRight"; id: string };
 
 function tabsReducer(state: TabsState, action: TabsAction): TabsState {
   switch (action.type) {
@@ -76,6 +79,20 @@ function tabsReducer(state: TabsState, action: TabsAction): TabsState {
       // Deselect any open tab so the workspace falls back to the Overview (home)
       // view, without closing the tabs the user has open.
       return { ...state, activeTabId: null };
+    case "closeAll":
+      return { tabs: [], activeTabId: null };
+    case "closeOthers": {
+      const keep = state.tabs.find((t) => t.id === action.id);
+      return keep ? { tabs: [keep], activeTabId: keep.id } : state;
+    }
+    case "closeRight": {
+      const idx = state.tabs.findIndex((t) => t.id === action.id);
+      if (idx === -1) return state;
+      const tabs = state.tabs.slice(0, idx + 1);
+      // Keep the current selection if it survived; otherwise fall back to the anchor tab.
+      const activeStillOpen = tabs.some((t) => t.id === state.activeTabId);
+      return { tabs, activeTabId: activeStillOpen ? state.activeTabId : action.id };
+    }
     default:
       return state;
   }
@@ -90,6 +107,9 @@ interface ShellCtx {
   focusTab: (id: string) => void;
   focusTabIndex: (index: number) => void;
   closeActiveTab: () => void;
+  closeAllTabs: () => void;
+  closeOtherTabs: (id: string) => void;
+  closeTabsToRight: (id: string) => void;
   // Return to the Overview (home) view without closing open tabs.
   goHome: () => void;
 
@@ -142,6 +162,9 @@ export function ShellProvider({ children }: { children: ReactNode }) {
   const closeTab = useCallback((id: string) => dispatch({ type: "close", id }), []);
   const focusTab = useCallback((id: string) => dispatch({ type: "focus", id }), []);
   const goHome = useCallback(() => dispatch({ type: "home" }), []);
+  const closeAllTabs = useCallback(() => dispatch({ type: "closeAll" }), []);
+  const closeOtherTabs = useCallback((id: string) => dispatch({ type: "closeOthers", id }), []);
+  const closeTabsToRight = useCallback((id: string) => dispatch({ type: "closeRight", id }), []);
 
   const focusTabIndex = useCallback(
     (index: number) => {
@@ -184,6 +207,9 @@ export function ShellProvider({ children }: { children: ReactNode }) {
       focusTab,
       focusTabIndex,
       closeActiveTab,
+      closeAllTabs,
+      closeOtherTabs,
+      closeTabsToRight,
       goHome,
       drawerOpen,
       toggleDrawer,
@@ -209,6 +235,9 @@ export function ShellProvider({ children }: { children: ReactNode }) {
       focusTab,
       focusTabIndex,
       closeActiveTab,
+      closeAllTabs,
+      closeOtherTabs,
+      closeTabsToRight,
       goHome,
       drawerOpen,
       toggleDrawer,

@@ -6,6 +6,25 @@ All notable changes to Mercek are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-06-05
+
+### Added
+
+- In-app auto-update: Mercek checks for a new release on launch and offers a one-click
+  "Update & restart". Update artifacts are signed and verified before installing.
+- Linux (.deb / .AppImage) and Windows (.msi / .exe) builds are now produced by the
+  release pipeline alongside the universal macOS build.
+- Delete / teardown from the UI, each behind a confirmation: delete a service (stopping
+  its running tasks), delete an empty cluster, and deregister a task-definition revision.
+- The run-task and create-service forms now pick the VPC, subnets, and security groups for
+  you: it detects the cluster's VPC from a subnet its existing services use (falling back
+  to the default VPC), then offers that VPC's subnets and groups as checklists instead of
+  typing IDs by hand.
+- Tab operations: right-click a tab (or use the command palette) for Close, Close Others,
+  Close to the Right, and Close All (⌘⇧W); middle-click a tab to close it.
+- The agent model is now picked from a per-provider dropdown (with a "custom…" escape for
+  any other id) instead of typed by hand.
+
 ## [0.2.0] - 2026-06-04
 
 ### Added
@@ -72,7 +91,8 @@ First public release. macOS (Apple Silicon and Intel).
 - Command palette and keyboard navigation.
 - Light and dark themes, with persisted table columns and CSV export.
 
-[Unreleased]: https://github.com/utibeabasi6/mercek/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/utibeabasi6/mercek/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/utibeabasi6/mercek/releases/tag/v0.3.0
 [0.2.0]: https://github.com/utibeabasi6/mercek/releases/tag/v0.2.0
 [0.1.1]: https://github.com/utibeabasi6/mercek/releases/tag/v0.1.1
 [0.1.0]: https://github.com/utibeabasi6/mercek/releases/tag/v0.1.0

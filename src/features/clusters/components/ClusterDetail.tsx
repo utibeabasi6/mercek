@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Tab } from "@/app/shell";
+import { useShell, type Tab } from "@/app/shell";
 import { useClusterResources, useScopeGraph } from "@/features/discovery/api";
 import { SubTabs, Field, Section } from "@/components/ui/Tabs";
 import { StatusBadge, Count } from "@/components/ui/Badge";
@@ -9,9 +9,13 @@ import { ObservationsSection } from "@/features/sentinel/components/Observations
 import { TopologyView } from "@/features/topology/TopologyView";
 import { RunTaskDialog } from "@/features/tasks/components/RunTaskDialog";
 import { CreateServiceDialog } from "@/features/services/components/CreateServiceDialog";
+import { useDeleteCluster } from "@/features/clusters/api";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { OpenInAwsButton } from "@/components/ui/OpenInAwsButton";
 import { awsConsole } from "@/lib/aws-console";
+import { appErrorMessage } from "@/lib/errors";
 import { shortAccount } from "@/lib/arn";
+import type { AppError } from "@/types";
 
 export function ClusterDetail({ tab }: { tab: Tab }) {
   const graph = useScopeGraph(tab.scope);
@@ -25,6 +29,9 @@ export function ClusterDetail({ tab }: { tab: Tab }) {
   const [sub, setSub] = useState(tab.section ?? "overview");
   const [running, setRunning] = useState(false);
   const [creatingService, setCreatingService] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const del = useDeleteCluster(tab.scope);
+  const { closeTab } = useShell();
   useEffect(() => {
     if (tab.section) setSub(tab.section);
   }, [tab.section, tab.focusId]);
@@ -58,6 +65,13 @@ export function ClusterDetail({ tab }: { tab: Tab }) {
             run task
           </button>
           <OpenInAwsButton url={awsConsole.cluster(graph.scope.region, cluster.name)} />
+          <button
+            type="button"
+            onClick={() => setConfirmDelete(true)}
+            className="shrink-0 whitespace-nowrap rounded border border-border px-2 py-1 text-fg-dim hover:border-err hover:text-err"
+          >
+            delete
+          </button>
           <span className="shrink-0 whitespace-nowrap text-[12px] text-fg-muted">
             {shortAccount(graph.accountId)} · {graph.scope.region}
           </span>
@@ -74,6 +88,32 @@ export function ClusterDetail({ tab }: { tab: Tab }) {
           cluster={cluster.name}
           onClose={() => setCreatingService(false)}
         />
+      )}
+
+      {confirmDelete && (
+        <ConfirmDialog
+          title={
+            <>
+              delete cluster <span className="text-accent">{cluster.name}</span>
+            </>
+          }
+          confirmLabel="delete"
+          danger
+          busy={del.isPending}
+          errorMessage={del.isError ? appErrorMessage(del.error as unknown as AppError) : undefined}
+          onConfirm={() =>
+            del.mutate(cluster.name, {
+              onSuccess: () => {
+                setConfirmDelete(false);
+                closeTab(tab.id);
+              },
+            })
+          }
+          onClose={() => setConfirmDelete(false)}
+        >
+          The cluster must have no active services, running tasks, or container instances — AWS
+          will refuse otherwise.
+        </ConfirmDialog>
       )}
 
       <SubTabs

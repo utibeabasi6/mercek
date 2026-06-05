@@ -1,6 +1,6 @@
 use tauri::State;
 
-use crate::domain::{EniDetail, EnvVar, Scope, SecretRef, Task, TaskDefinition};
+use crate::domain::{EniDetail, EnvVar, NetworkOptions, Scope, SecretRef, Task, TaskDefinition};
 use crate::error::AppResult;
 use crate::resources::ecs::mutate;
 use crate::resources::ecs::mutate::ContainerEdit;
@@ -90,6 +90,17 @@ pub async fn register_task_def(
     .await
 }
 
+/// Deregister a task-definition revision (marks it INACTIVE). Write path — real AWS only.
+#[tauri::command]
+pub async fn deregister_task_def(
+    state: State<'_, AppState>,
+    scope: Scope,
+    arn: String,
+) -> AppResult<()> {
+    let clients = state.pool.get(&scope).await?;
+    mutate::deregister_task_def(&clients.ecs_client, &scope.profile, &arn).await
+}
+
 #[tauri::command]
 pub async fn describe_eni(
     state: State<'_, AppState>,
@@ -98,6 +109,13 @@ pub async fn describe_eni(
 ) -> AppResult<EniDetail> {
     let api = state.pool.get(&scope).await?.ec2.clone();
     api.describe_eni(&eni_id).await
+}
+
+/// VPCs / subnets / security groups in the scope's region, for the awsvpc network pickers.
+#[tauri::command]
+pub async fn network_options(state: State<'_, AppState>, scope: Scope) -> AppResult<NetworkOptions> {
+    let api = state.pool.get(&scope).await?.ec2.clone();
+    api.network_options().await
 }
 
 /// Run a one-off task. Write path — real AWS only.

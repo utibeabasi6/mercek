@@ -548,3 +548,49 @@ pub async fn create_service(
         .map(map::service)
         .ok_or_else(|| AppError::internal("CreateService returned no service"))
 }
+
+/// Delete a service. `force` deletes it even with running tasks (ECS otherwise requires
+/// the desired count to be 0 first). Returns the service in its terminating state.
+pub async fn delete_service(
+    client: &Client,
+    profile: &str,
+    cluster: &str,
+    service: &str,
+    force: bool,
+) -> AppResult<Service> {
+    let resp = client
+        .delete_service()
+        .cluster(cluster)
+        .service(service)
+        .force(force)
+        .send()
+        .await
+        .map_err(|e| classify(profile, e))?;
+    resp.service()
+        .map(map::service)
+        .ok_or_else(|| AppError::internal("DeleteService returned no service"))
+}
+
+/// Delete a cluster. ECS rejects this unless the cluster has no active services, running
+/// tasks, or container instances — that error is surfaced to the user as-is.
+pub async fn delete_cluster(client: &Client, profile: &str, cluster: &str) -> AppResult<()> {
+    client
+        .delete_cluster()
+        .cluster(cluster)
+        .send()
+        .await
+        .map_err(|e| classify(profile, e))?;
+    Ok(())
+}
+
+/// Deregister a task-definition revision (marks it INACTIVE). Tasks already running on it
+/// keep running; it just can't start new ones.
+pub async fn deregister_task_def(client: &Client, profile: &str, arn: &str) -> AppResult<()> {
+    client
+        .deregister_task_definition()
+        .task_definition(arn)
+        .send()
+        .await
+        .map_err(|e| classify(profile, e))?;
+    Ok(())
+}

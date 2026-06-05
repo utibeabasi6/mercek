@@ -65,7 +65,10 @@ export function Select({
       </button>
       {open && (
         <div
-          className={`absolute inset-x-0 z-20 max-h-48 overflow-auto rounded border border-border-strong bg-bg-elev py-1 shadow-2xl ${
+          // Size the menu to its content (at least the trigger width, capped so it can't
+          // run off-screen) instead of locking it to the trigger — otherwise long option
+          // labels truncate even when there's room. Each option keeps a title tooltip.
+          className={`absolute left-0 z-20 max-h-48 w-max min-w-full max-w-[18rem] overflow-auto rounded border border-border-strong bg-bg-elev py-1 shadow-2xl ${
             dropUp ? "bottom-full mb-1" : "top-full mt-1"
           }`}
         >

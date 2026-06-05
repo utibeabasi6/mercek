@@ -26,10 +26,16 @@ and dependencies without switching tabs and accounts.
 
 - **Multi-account, multi-region discovery** from your `~/.aws` profiles (SSO,
   assume-role, MFA, static keys), with opt-in per-profile scopes.
+- **Multi-cluster overview** — a home view with service health (failed / degraded /
+  deploying / healthy) across every active scope, and a "needs attention" list.
 - **Service / cluster / task detail** — deployments, events, tasks, target health,
   autoscaling, metrics, right-sizing, environment, networking, containers.
 - **Deployments & rollback** — live rollout state, circuit-breaker status, one-click
-  rollback, and cross-environment / cross-region comparison.
+  rollback, a per-service deployment timeline, one-step image deploys, and
+  cross-environment / cross-region comparison.
+- **Create & manage** — create clusters, services, and task definitions (from scratch),
+  run one-off tasks, and delete / deregister them — every write behind a diff or
+  confirmation, with VPC / subnets / security groups picked from menus, not typed.
 - **Logs** — CloudWatch log tail in a bottom drawer, across every task of a service or
   just one, with a text filter, level highlighting, and copy / download.
 - **ECS Exec** — an interactive shell into a running container, with a one-click path to
@@ -45,13 +51,17 @@ and dependencies without switching tabs and accounts.
 - **Agent panel** — connect your own coding agent (e.g. Claude Code) over the Agent
   Client Protocol. It's **read-only to AWS**; any change it proposes opens a
   diff-and-confirm dialog plus the equivalent AWS CLI command.
+- **Open in AWS console** — jump to any cluster, service, or task in the AWS console.
+- **Stays current** — in-app auto-update checks for new releases and updates in one click.
 - **Keyboard-driven** — a ⌘K command palette and bindings throughout.
 
 ## Install
 
-macOS (Apple Silicon & Intel). Download the latest `.dmg` from the
+macOS (Apple Silicon & Intel), Linux (`.deb` / `.AppImage`), and Windows (`.msi` / `.exe`).
+Download the latest build from the
 [releases page](https://github.com/utibeabasi6/mercek/releases/latest), or build from
-source below. Linux and Windows are on the roadmap.
+source below. Once installed, Mercek keeps itself up to date — it checks for a new release
+on launch and updates in one click.
 
 ### Opening it (unsigned build)
 

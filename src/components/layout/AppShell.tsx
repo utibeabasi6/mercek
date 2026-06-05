@@ -12,6 +12,7 @@ import { StatusBar } from "@/components/layout/StatusBar";
 import { CommandPalette, type PaletteCommand } from "@/components/ui/CommandPalette";
 import { ReauthBanner } from "@/features/profiles/components/ReauthBanner";
 import { DiscoveryBanner } from "@/features/discovery/components/DiscoveryBanner";
+import { UpdateBanner } from "@/features/updates/components/UpdateBanner";
 import { RefreshButton } from "@/components/layout/RefreshButton";
 import { NotificationsInbox } from "@/features/sentinel/components/NotificationsInbox";
 import { useSentinel } from "@/features/sentinel/useSentinel";
@@ -86,6 +87,9 @@ export function AppShell() {
     openPalette,
     toggleDrawer,
     closeActiveTab,
+    closeAllTabs,
+    closeOtherTabs,
+    activeTabId,
     focusTabIndex,
     goHome,
     drawerOpen,
@@ -167,6 +171,19 @@ export function AppShell() {
       { id: "refresh", title: "Refresh discovery", hint: `${modLabel} R`, run: refresh },
       { id: "close-tab", title: "Close active tab", hint: `${modLabel} W`, run: closeActiveTab },
       {
+        id: "close-all-tabs",
+        title: "Close all tabs",
+        hint: `${modLabel} ⇧ W`,
+        run: closeAllTabs,
+      },
+      {
+        id: "close-other-tabs",
+        title: "Close other tabs",
+        run: () => {
+          if (activeTabId) closeOtherTabs(activeTabId);
+        },
+      },
+      {
         id: "toggle-agent",
         title: agentOpen ? "Hide agent panel" : "Show agent panel",
         hint: `${modLabel} J`,
@@ -184,6 +201,9 @@ export function AppShell() {
       drawerOpen,
       refresh,
       closeActiveTab,
+      closeAllTabs,
+      closeOtherTabs,
+      activeTabId,
       goHome,
       agentOpen,
       toggleAgent,
@@ -201,12 +221,22 @@ export function AppShell() {
       "mod+r": refresh,
       "mod+j": toggleAgent,
       "mod+0": goHome,
+      "mod+shift+w": closeAllTabs,
     };
     for (let i = 1; i <= 9; i++) {
       map[`mod+${i}`] = () => focusTabIndex(i - 1);
     }
     return map;
-  }, [openPalette, toggleDrawer, closeActiveTab, refresh, toggleAgent, focusTabIndex, goHome]);
+  }, [
+    openPalette,
+    toggleDrawer,
+    closeActiveTab,
+    closeAllTabs,
+    refresh,
+    toggleAgent,
+    focusTabIndex,
+    goHome,
+  ]);
 
   useKeybindings(keymap);
 
@@ -218,6 +248,7 @@ export function AppShell() {
         onToggleAgent={toggleAgent}
         onSettings={() => setSettingsOpen(true)}
       />
+      <UpdateBanner />
       <ReauthBanner />
       <DiscoveryBanner />
       <div className="flex min-h-0 flex-1">

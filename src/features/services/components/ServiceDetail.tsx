@@ -4,7 +4,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { useShell, type Tab } from "@/app/shell";
 import { useClusterResources } from "@/features/discovery/api";
 import { taskTab } from "@/features/discovery/tabs";
-import { useForceDeploy } from "@/features/services/api";
+import { useForceDeploy, useDeleteService } from "@/features/services/api";
 import { SubTabs, Field } from "@/components/ui/Tabs";
 import { StatusBadge, StatusGlyph, Count } from "@/components/ui/Badge";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -73,8 +73,10 @@ export function ServiceDetail({ tab }: { tab: Tab }) {
   const [deployingImage, setDeployingImage] = useState(false);
   const [rollbackTo, setRollbackTo] = useState<string | null>(null);
   const [comparing, setComparing] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const forceDeploy = useForceDeploy(tab.scope, tab.clusterName ?? "");
-  const { openTab, askAgent } = useShell();
+  const deleteSvc = useDeleteService(tab.scope, tab.clusterName ?? "");
+  const { openTab, closeTab, askAgent } = useShell();
   const focusRef = useRef<HTMLDivElement | null>(null);
 
   // An agent "navigate" can re-point this tab's section/focus while it's open.
@@ -161,6 +163,13 @@ export function ServiceDetail({ tab }: { tab: Tab }) {
           <OpenInAwsButton
             url={awsConsole.service(tab.scope.region, service.cluster, service.name)}
           />
+          <button
+            type="button"
+            onClick={() => setConfirmDelete(true)}
+            className="shrink-0 whitespace-nowrap rounded border border-border px-2 py-1 text-fg-dim hover:border-err hover:text-err"
+          >
+            delete
+          </button>
         </div>
       </header>
 
@@ -195,6 +204,37 @@ export function ServiceDetail({ tab }: { tab: Tab }) {
           service={service}
           onClose={() => setDeployingImage(false)}
         />
+      )}
+
+      {confirmDelete && (
+        <ConfirmDialog
+          title={
+            <>
+              delete service <span className="text-accent">{service.name}</span>
+            </>
+          }
+          confirmLabel="delete"
+          danger
+          busy={deleteSvc.isPending}
+          errorMessage={
+            deleteSvc.isError ? appErrorMessage(deleteSvc.error as unknown as AppError) : undefined
+          }
+          onConfirm={() =>
+            deleteSvc.mutate(
+              { service: service.name, force: true },
+              {
+                onSuccess: () => {
+                  setConfirmDelete(false);
+                  closeTab(tab.id);
+                },
+              },
+            )
+          }
+          onClose={() => setConfirmDelete(false)}
+        >
+          This stops all {service.running} running task(s) and deletes the service. This can't be
+          undone.
+        </ConfirmDialog>
       )}
 
       {confirmDeploy && (

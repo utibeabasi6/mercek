@@ -24,6 +24,9 @@ All notable changes to Mercek are documented here. The format is based on
   Close to the Right, and Close All (⌘⇧W); middle-click a tab to close it.
 - The agent model is now picked from a per-provider dropdown (with a "custom…" escape for
   any other id) instead of typed by hand.
+- The scope selector can now activate a profile in several regions at once (a per-profile
+  region menu), so you can watch one account across multiple regions without duplicate
+  `~/.aws` profile entries.
 
 ### Security
 

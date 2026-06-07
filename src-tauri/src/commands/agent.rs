@@ -86,6 +86,9 @@ pub async fn agent_connect(
     // `acp.rs`). Strip any stale `~/.claude.json` copy first so claude-code-acp
     // (which also reads user config) doesn't load the same tools a second time.
     unregister_mcp_server();
+    // Kill any previous harness tree before starting another, so a reconnect (e.g.
+    // switching models) doesn't strand the old npx/node processes.
+    state.kill_agent_process();
     let (session, info) = SdkAcpSession::connect(
         &agent_id,
         model,
@@ -96,6 +99,7 @@ pub async fn agent_connect(
     if let Ok(mut c) = state.agent_canceller.lock() {
         *c = Some(session.canceller());
     }
+    state.set_agent_pgid(session.pgid());
     *state.agent.lock().await = Some(Box::new(session));
     Ok(info)
 }
@@ -176,6 +180,9 @@ pub async fn agent_disconnect(state: State<'_, AppState>) -> AppResult<()> {
     if let Ok(mut c) = state.agent_canceller.lock() {
         *c = None;
     }
+    // Kill the harness tree (npx + node) before dropping the session: the SDK's own
+    // drop-kill only reaches the direct child.
+    state.kill_agent_process();
     *state.agent.lock().await = None;
     Ok(())
 }

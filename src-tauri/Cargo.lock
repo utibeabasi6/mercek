@@ -3210,7 +3210,7 @@ dependencies = [
 
 [[package]]
 name = "mercek"
-version = "0.3.0"
+version = "0.3.3"
 dependencies = [
  "agent-client-protocol",
  "agent-client-protocol-rmcp",
@@ -3227,6 +3227,7 @@ dependencies = [
  "aws-sdk-sts",
  "aws-smithy-types",
  "futures",
+ "libc",
  "portable-pty",
  "redb",
  "rmcp",
@@ -3239,6 +3240,7 @@ dependencies = [
  "tauri-plugin-updater",
  "thiserror 2.0.18",
  "tokio",
+ "tokio-util",
  "tracing",
  "tracing-subscriber",
  "ts-rs",

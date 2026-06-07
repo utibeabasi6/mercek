@@ -6,6 +6,26 @@ All notable changes to Mercek are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-06-07
+
+### Added
+
+- The agent's "thinking" now shows a rolling last-three-lines tail as it streams, with a
+  "Thinking" toggle to expand the full reasoning — so long chains of thought no longer
+  push the answer off-screen.
+
+### Fixed
+
+- The agent harness subprocess (and its `node` child) is no longer orphaned on disconnect,
+  reconnect, or app quit. Mercek now spawns the harness in its own process group and kills
+  the whole group, instead of relying on a child-kill that left the `npx`/`node` tree
+  running and accumulating across sessions.
+- OpenCode now connects: the adapter launched `opencode` (which opens its TUI) instead of
+  `opencode acp` (its ACP server), so connecting always timed out.
+- Agent reasoning is no longer rendered one word per line. Streamed thought chunks are now
+  coalesced into a single block (like message chunks already were), fixing harnesses that
+  stream their reasoning token-by-token.
+
 ## [0.3.0] - 2026-06-05
 
 ### Added
@@ -110,7 +130,8 @@ First public release. macOS (Apple Silicon and Intel).
 - Command palette and keyboard navigation.
 - Light and dark themes, with persisted table columns and CSV export.
 
-[Unreleased]: https://github.com/utibeabasi6/mercek/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/utibeabasi6/mercek/compare/v0.3.3...HEAD
+[0.3.3]: https://github.com/utibeabasi6/mercek/compare/v0.3.2...v0.3.3
 [0.3.0]: https://github.com/utibeabasi6/mercek/releases/tag/v0.3.0
 [0.2.0]: https://github.com/utibeabasi6/mercek/releases/tag/v0.2.0
 [0.1.1]: https://github.com/utibeabasi6/mercek/releases/tag/v0.1.1

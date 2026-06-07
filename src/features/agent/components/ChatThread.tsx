@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Spinner } from "@/components/ui/Spinner";
 import { Select } from "@/components/ui/Select";
-import { Send, Square, Wrench } from "lucide-react";
+import { ChevronRight, Send, Square, Wrench } from "lucide-react";
 import { ErrorBanner } from "@/components/ui/StateView";
 import { Markdown } from "@/components/ui/Markdown";
 import { invoke } from "@/lib/tauri";
@@ -18,20 +18,24 @@ function ecsToolName(title: string): string | null {
 }
 
 // Coalesce a thread into render groups: consecutive agent message chunks become one
-// markdown block (they stream in piecewise), while user turns and tool/thought/done
-// updates stay as their own rows. Without this, markdown can't be parsed — each
-// chunk would render in isolation.
+// markdown block, and consecutive thought chunks one thinking block — both stream in
+// piecewise (some harnesses token-by-token), so joining is what makes them read as
+// prose instead of one word per line. User turns and tool/done/error updates stay as
+// their own rows.
 type Group =
   | { kind: "user"; key: number; text: string }
   | { kind: "assistant"; key: number; text: string }
+  | { kind: "thought"; key: number; text: string }
   | { kind: "update"; key: number; update: AgentSessionUpdate };
 
 function groupThread(thread: ThreadItem[]): Group[] {
   const groups: Group[] = [];
-  let buf: { key: number; text: string } | null = null;
+  // Open accumulator for whichever streamed kind we're mid-run on; flushed when the
+  // kind changes or a standalone row (user/tool/done) interrupts it.
+  let buf: { kind: "assistant" | "thought"; key: number; text: string } | null = null;
   const flush = () => {
     if (buf) {
-      groups.push({ kind: "assistant", key: buf.key, text: buf.text });
+      groups.push({ kind: buf.kind, key: buf.key, text: buf.text });
       buf = null;
     }
   };
@@ -39,14 +43,21 @@ function groupThread(thread: ThreadItem[]): Group[] {
     if (item.role === "user") {
       flush();
       groups.push({ kind: "user", key: i, text: item.text });
-    } else if (item.update.type === "messageChunk") {
-      if (!buf) buf = { key: i, text: "" };
-      buf.text += item.update.text;
-    } else if (item.update.type !== "toolCall" || ecsToolName(item.update.tool)) {
-      flush();
-      groups.push({ kind: "update", key: i, update: item.update });
+      return;
     }
-    // else: a harness-internal tool call — hidden (don't flush, so text stays joined).
+    const u = item.update;
+    if (u.type === "messageChunk" || u.type === "thoughtChunk") {
+      const kind = u.type === "messageChunk" ? "assistant" : "thought";
+      if (!buf || buf.kind !== kind) {
+        flush();
+        buf = { kind, key: i, text: "" };
+      }
+      buf.text += u.text;
+    } else if (u.type !== "toolCall" || ecsToolName(u.tool)) {
+      flush();
+      groups.push({ kind: "update", key: i, update: u });
+    }
+    // else: a harness-internal tool call — hidden (don't flush, so chunks stay joined).
   });
   flush();
   return groups;
@@ -60,18 +71,65 @@ const EXAMPLES = [
   "Is anything over-provisioned?",
 ];
 
-// Renders one streamed update: thinking, and a card per tool call — the trust
-// surface where every read the agent made (and any blocked write) is visible.
+// A coalesced thinking block. Reasoning can run long and is secondary, so collapsed
+// (the default) it shows only the last ~3 lines — a rolling tail pinned to the freshest
+// text as it streams — with a toggle to expand the whole thing. The top fades to hint
+// there's more above, and the toggle hides itself when the thought already fits.
+const THOUGHT_TAIL_LINES = 3;
+const THOUGHT_LINE_HEIGHT = 1.6;
+
+function ThoughtBlock({ text }: { text: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const [overflowing, setOverflowing] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || expanded) return;
+    // Collapsed: roll the window to the newest line and note whether more is hidden.
+    el.scrollTop = el.scrollHeight;
+    setOverflowing(el.scrollHeight - el.clientHeight > 2);
+  }, [text, expanded]);
+
+  const tail = `${THOUGHT_TAIL_LINES * THOUGHT_LINE_HEIGHT}em`;
+  const fade = `linear-gradient(to bottom, transparent, #000 ${THOUGHT_LINE_HEIGHT}em)`;
+  const faded = !expanded && overflowing;
+  return (
+    <div className="my-1 text-[12px] text-fg-muted">
+      {(overflowing || expanded) && (
+        <button
+          type="button"
+          onClick={() => setExpanded((e) => !e)}
+          className="mb-0.5 flex items-center gap-1 text-[11px] text-fg-muted transition-colors hover:text-fg"
+        >
+          <ChevronRight
+            size={11}
+            className={`shrink-0 transition-transform ${expanded ? "rotate-90" : ""}`}
+          />
+          Thinking
+        </button>
+      )}
+      <div
+        ref={ref}
+        className="overflow-hidden whitespace-pre-wrap break-words italic"
+        style={{
+          lineHeight: THOUGHT_LINE_HEIGHT,
+          maxHeight: expanded ? undefined : tail,
+          WebkitMaskImage: faded ? fade : undefined,
+          maskImage: faded ? fade : undefined,
+        }}
+      >
+        {text}
+      </div>
+    </div>
+  );
+}
+
+// Renders one standalone streamed update: a card per tool call, tool results, the
+// turn divider, errors, and permission prompts — the trust surface where every read
+// the agent made (and any blocked write) is visible. Message and thought chunks are
+// coalesced into their own groups upstream (`groupThread`), not rendered here.
 function UpdateRow({ u }: { u: AgentSessionUpdate }) {
   switch (u.type) {
-    case "messageChunk":
-      return <span className="whitespace-pre-wrap break-words text-fg">{u.text}</span>;
-    case "thoughtChunk":
-      return (
-        <div className="whitespace-pre-wrap break-words py-0.5 text-[12px] italic text-fg-muted">
-          {u.text}
-        </div>
-      );
     case "toolCall": {
       const name = ecsToolName(u.tool) ?? u.tool;
       return (
@@ -279,6 +337,8 @@ export function ChatThread({
             <div key={g.key} className="my-1.5">
               <Markdown>{g.text}</Markdown>
             </div>
+          ) : g.kind === "thought" ? (
+            <ThoughtBlock key={g.key} text={g.text} />
           ) : (
             <UpdateRow key={g.key} u={g.update} />
           ),

@@ -59,7 +59,9 @@ pub const ADAPTERS: &[Adapter] = &[
         id: "opencode",
         name: "OpenCode",
         bin: "opencode",
-        acp_command: "opencode",
+        // Bare `opencode` launches the TUI (its default command); the ACP stdio server
+        // is the `acp` subcommand. Needs `opencode auth login` once to be usable.
+        acp_command: "opencode acp",
         model_env: None,
         install_hint: "install OpenCode: https://opencode.ai",
     },

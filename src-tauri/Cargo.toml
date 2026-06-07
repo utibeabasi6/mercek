@@ -1,6 +1,6 @@
 [package]
 name = "mercek"
-version = "0.3.0"
+version = "0.3.3"
 description = "A desktop IDE for AWS ECS"
 authors = ["Utibeabasi Umanah <utibeabasiumanah6@gmail.com>"]
 edition = "2021"
@@ -41,7 +41,11 @@ serde_json = "1"
 ts-rs = "12"
 thiserror = "2"
 anyhow = "1"
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time", "process", "io-util", "signal"] }
+# Bridge tokio child stdio (AsyncRead/AsyncWrite) onto the futures-based traits the
+# ACP `ByteStreams` transport expects — we spawn the harness ourselves (own its pid
+# and process group) instead of letting the SDK spawn-and-hide it.
+tokio-util = { version = "0.7", features = ["compat"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 async-trait = "0.1"
@@ -67,4 +71,10 @@ rmcp = { version = "1", features = ["server", "macros", "transport-io"] }
 # PTY host for the ECS Exec terminal: spawns `aws ecs execute-command --interactive`
 # in a pseudo-terminal so it's a real interactive shell.
 portable-pty = "0.9"
+
+# Kill the agent harness's whole process group on disconnect/quit. The harness is
+# `npx … claude-code-acp`, which forks a `node` grandchild; signalling only the
+# direct child orphans node, so we `kill(-pgid)` the group we spawned it into.
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
 

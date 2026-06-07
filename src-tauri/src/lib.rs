@@ -57,6 +57,30 @@ pub fn run() {
             // Listen for navigate/propose intents from the out-of-process MCP tools.
             agent::ipc::serve(state.agent_intent_sink.clone());
             app.manage(state);
+            // `RunEvent::Exit` covers a GUI quit, but a terminal SIGINT (Ctrl+C during
+            // `tauri dev`) or a SIGTERM kills us without it — and the harness is in its
+            // own process group, so it won't catch the terminal's signal either. Reap it
+            // explicitly on those signals before we exit.
+            #[cfg(unix)]
+            {
+                let handle = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    use tokio::signal::unix::{signal, SignalKind};
+                    let (mut int, mut term) =
+                        match (signal(SignalKind::interrupt()), signal(SignalKind::terminate())) {
+                            (Ok(i), Ok(t)) => (i, t),
+                            _ => return,
+                        };
+                    tokio::select! {
+                        _ = int.recv() => {}
+                        _ = term.recv() => {}
+                    }
+                    if let Some(state) = handle.try_state::<AppState>() {
+                        state.kill_agent_process();
+                    }
+                    std::process::exit(0);
+                });
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -112,6 +136,16 @@ pub fn run() {
             commands::tasks::describe_eni,
             commands::tasks::network_options,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        // Tauri exits via `std::process::exit`, which skips Rust destructors — so the
+        // agent harness it spawned (npx + its node child) would be orphaned on quit.
+        // Kill its process group explicitly here, on the way out.
+        .run(|app, event| {
+            if let tauri::RunEvent::Exit = event {
+                if let Some(state) = app.try_state::<AppState>() {
+                    state.kill_agent_process();
+                }
+            }
+        });
 }

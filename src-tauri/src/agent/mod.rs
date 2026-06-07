@@ -12,4 +12,5 @@ pub mod ipc;
 pub mod mcp;
 #[cfg(feature = "mock")]
 pub mod mock_session;
+pub mod proc;
 pub mod session;

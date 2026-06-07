@@ -37,6 +37,11 @@ pub struct AppState {
     /// picked that option; `None` = dismissed → deny. Shared into the session at connect.
     pub agent_permissions: Arc<Mutex<HashMap<u32, oneshot::Sender<Option<String>>>>>,
     pub agent_perm_seq: Arc<AtomicU32>,
+    /// Process-group id of the connected harness (== leader pid; spawned into its own
+    /// group). We SIGKILL this group on disconnect/reconnect/quit so the npx wrapper AND
+    /// its `node` grandchild die together — the SDK only ever killed the direct child,
+    /// and never at all on a GUI hard-exit. 0/None = nothing spawned.
+    agent_pgid: Mutex<Option<i32>>,
     tails: Mutex<HashMap<u64, AbortHandle>>,
     tail_seq: AtomicU64,
     /// Live ECS Exec terminal sessions (PTY master + stdin writer + child).
@@ -54,10 +59,32 @@ impl AppState {
             agent_intent_sink: Arc::new(Mutex::new(None)),
             agent_permissions: Arc::new(Mutex::new(HashMap::new())),
             agent_perm_seq: Arc::new(AtomicU32::new(1)),
+            agent_pgid: Mutex::new(None),
             tails: Mutex::new(HashMap::new()),
             tail_seq: AtomicU64::new(1),
             exec_sessions: Mutex::new(HashMap::new()),
             exec_seq: AtomicU64::new(1),
+        }
+    }
+
+    /// Record the connected harness's process group so we can kill the tree later.
+    pub fn set_agent_pgid(&self, pgid: i32) {
+        if let Ok(mut g) = self.agent_pgid.lock() {
+            *g = (pgid > 1).then_some(pgid);
+        }
+    }
+
+    /// SIGKILL the connected harness's whole process group (npx + its node child) and
+    /// forget it. Safe to call when nothing is connected. Used on disconnect, before a
+    /// reconnect, and on app quit (where Rust destructors would otherwise be skipped).
+    pub fn kill_agent_process(&self) {
+        let pgid = self
+            .agent_pgid
+            .lock()
+            .ok()
+            .and_then(|mut g| g.take());
+        if let Some(pgid) = pgid {
+            crate::agent::proc::kill_group(pgid);
         }
     }
 

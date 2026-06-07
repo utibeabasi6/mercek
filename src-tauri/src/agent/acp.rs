@@ -20,10 +20,11 @@ use agent_client_protocol::schema::{
 };
 use agent_client_protocol::util::MatchDispatch;
 use agent_client_protocol::{
-    on_receive_request, AcpAgent, Agent, Client, ConnectionTo, SessionMessage,
+    on_receive_request, AcpAgent, Agent, ByteStreams, Client, ConnectionTo, SessionMessage,
 };
 use async_trait::async_trait;
 use tokio::sync::{mpsc, oneshot};
+use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 
 use crate::agent::mcp::SharedSink;
 use crate::agent::session::{AcpSession, AgentSink};
@@ -90,6 +91,17 @@ pub struct SdkAcpSession {
     /// permission handler reads it to decide auto-approve / ask / deny; `set_mode`
     /// keeps it in sync.
     current_mode: Arc<StdMutex<Option<String>>>,
+    /// Process-group id of the spawned harness (== leader pid; we put it in its own
+    /// group). Lets the app SIGKILL the whole tree (npx + its node child) on
+    /// disconnect/quit — see `agent::proc::kill_group`. 0 if the pid was unavailable.
+    pgid: i32,
+}
+
+impl SdkAcpSession {
+    /// The harness process group to signal on teardown (0 = nothing to kill).
+    pub fn pgid(&self) -> i32 {
+        self.pgid
+    }
 }
 
 fn acp_to_app(e: agent_client_protocol::Error) -> AppError {
@@ -141,27 +153,79 @@ impl SdkAcpSession {
                 adapter.name, adapter.install_hint
             )));
         }
-        let mut agent = AcpAgent::from_str(adapter.acp_command).map_err(acp_to_app)?;
-        // A Finder/Dock launch inherits a stripped PATH, so the harness binary (npx,
-        // claude, …) isn't found when the adapter is spawned. Run it with the user's
-        // login-shell PATH, and inject the model preference as the harness's model env
-        // var when we know it. (from_str always yields a Stdio transport for our
-        // command-line adapters; a non-stdio transport simply can't carry env.)
-        match agent.into_server() {
-            McpServer::Stdio(mut stdio) => {
-                stdio
-                    .env
-                    .push(EnvVariable::new("PATH", crate::agent::adapters::user_path_string()));
-                if let (Some(env_name), Some(m)) =
-                    (adapter.model_env, model.filter(|m| !m.is_empty()))
-                {
-                    stdio.env.push(EnvVariable::new(env_name, m));
-                }
-                agent = AcpAgent::new(McpServer::Stdio(stdio));
+        // Parse the adapter command line (program, args, any NAME=value env prefix) with
+        // the SDK's parser, then spawn it OURSELVES rather than letting the SDK do it: the
+        // SDK spawns-and-hides the child and only SIGKILLs the *direct* process on drop,
+        // which orphans npx's `node` grandchild and never runs at all on a GUI hard-exit.
+        // Owning the spawn lets us put the harness in its own process group and kill the
+        // whole tree on disconnect/quit (see `agent::proc`).
+        let parsed = AcpAgent::from_str(adapter.acp_command).map_err(acp_to_app)?;
+        let stdio = match parsed.into_server() {
+            McpServer::Stdio(s) => s,
+            _ => {
+                return Err(AppError::internal(format!(
+                    "{} adapter must be a stdio command",
+                    adapter.name
+                )))
             }
-            other => agent = AcpAgent::new(other),
-        }
+        };
         let (name, acp_cmd, hint) = (adapter.name, adapter.acp_command, adapter.install_hint);
+
+        let mut cmd = tokio::process::Command::new(&stdio.command);
+        cmd.args(&stdio.args);
+        for ev in &stdio.env {
+            cmd.env(&ev.name, &ev.value);
+        }
+        // A Finder/Dock launch inherits a stripped PATH, so the harness binary (npx,
+        // claude, …) isn't on it; run with the user's login-shell PATH. Inject the model
+        // preference under the harness's model env var when we know it.
+        cmd.env("PATH", crate::agent::adapters::user_path_string());
+        if let (Some(env_name), Some(m)) = (adapter.model_env, model.filter(|m| !m.is_empty())) {
+            cmd.env(env_name, m);
+        }
+        cmd.stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped());
+        // Own process group (leader pid == pgid) so we can SIGKILL the whole tree; and
+        // kill_on_drop as a backstop if this task is dropped while the runtime is alive.
+        #[cfg(unix)]
+        cmd.process_group(0);
+        cmd.kill_on_drop(true);
+        let mut child = cmd.spawn().map_err(|e| {
+            AppError::internal(format!("couldn't start {name} (`{acp_cmd}`): {e} — {hint}"))
+        })?;
+        let pgid = child.id().map(|p| p as i32).unwrap_or(0);
+        let child_stdin = child
+            .stdin
+            .take()
+            .ok_or_else(|| AppError::internal("harness stdin unavailable"))?;
+        let child_stdout = child
+            .stdout
+            .take()
+            .ok_or_else(|| AppError::internal("harness stdout unavailable"))?;
+        // Drain the harness's stderr so its pipe can't fill and wedge the process; keep a
+        // capped tail to enrich a "closed before ready" error (the SDK used to do this).
+        let stderr_tail: Arc<StdMutex<String>> = Arc::new(StdMutex::new(String::new()));
+        if let Some(err) = child.stderr.take() {
+            let tail = stderr_tail.clone();
+            tokio::spawn(async move {
+                use tokio::io::{AsyncBufReadExt, BufReader};
+                let mut lines = BufReader::new(err).lines();
+                while let Ok(Some(line)) = lines.next_line().await {
+                    tracing::debug!(target: "agent_harness", "{line}");
+                    if let Ok(mut t) = tail.lock() {
+                        t.push_str(&line);
+                        t.push('\n');
+                        let extra = t.len().saturating_sub(8192);
+                        if extra > 0 {
+                            *t = t.split_off(extra);
+                        }
+                    }
+                }
+            });
+        }
+        let transport = ByteStreams::new(child_stdin.compat_write(), child_stdout.compat());
+        let stderr_for_err = stderr_tail;
 
         let (cmd_tx, mut cmd_rx) = mpsc::unbounded_channel::<Cmd>();
         let current_sink: SharedSink = Arc::new(StdMutex::new(None));
@@ -211,6 +275,9 @@ impl SdkAcpSession {
         let ready_in_closure = ready_slot.clone();
 
         tokio::spawn(async move {
+            // Own the Child for the connection's whole lifetime: kill_on_drop SIGKILLs the
+            // direct process if this task ends (a backstop to the group-kill on disconnect).
+            let _harness_child = child;
             // NB: do NOT register a global `on_receive_notification` here — it would
             // swallow the session's own update notifications before they reach the
             // ActiveSession's stream, leaving every turn empty. The session captures
@@ -319,7 +386,7 @@ impl SdkAcpSession {
                     },
                     on_receive_request!(),
                 )
-                .connect_with(agent, async move |cx| {
+                .connect_with(transport, async move |cx| {
                     // Hand the harness our read-only ECS tools as a STDIO MCP server it
                     // spawns itself (`mercek --mcp`). The in-process MCP-over-ACP bridge
                     // registers as an Http server, which claude-code-acp does NOT honor
@@ -451,6 +518,17 @@ impl SdkAcpSession {
             }
         });
 
+        // Any failure to reach "ready" leaves a half-started harness whose task still
+        // owns the Child — kill the whole group so a hung/slow harness can't linger.
+        let tail = || {
+            stderr_for_err
+                .lock()
+                .ok()
+                .map(|t| t.trim().to_string())
+                .filter(|t| !t.is_empty())
+                .map(|t| format!(" — last output: {t}"))
+                .unwrap_or_default()
+        };
         match tokio::time::timeout(std::time::Duration::from_secs(20), ready_rx).await {
             Ok(Ok(Ok((info, conn, session_id)))) => {
                 if let Ok(mut g) = current_mode.lock() {
@@ -463,17 +541,29 @@ impl SdkAcpSession {
                         session_id,
                         current_sink,
                         current_mode,
+                        pgid,
                     },
                     info,
                 ))
             }
-            Ok(Ok(Err(e))) => Err(e),
-            Ok(Err(_)) => Err(AppError::internal(format!(
-                "{name} closed the connection before it was ready — is `{acp_cmd}` installed? {hint}"
-            ))),
-            Err(_) => Err(AppError::internal(format!(
-                "timed out starting {name} (`{acp_cmd}`) — {hint}"
-            ))),
+            Ok(Ok(Err(e))) => {
+                crate::agent::proc::kill_group(pgid);
+                Err(e)
+            }
+            Ok(Err(_)) => {
+                crate::agent::proc::kill_group(pgid);
+                Err(AppError::internal(format!(
+                    "{name} closed the connection before it was ready — is `{acp_cmd}` installed? {hint}{}",
+                    tail()
+                )))
+            }
+            Err(_) => {
+                crate::agent::proc::kill_group(pgid);
+                Err(AppError::internal(format!(
+                    "timed out starting {name} (`{acp_cmd}`) — {hint}{}",
+                    tail()
+                )))
+            }
         }
     }
 }

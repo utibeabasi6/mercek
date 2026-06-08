@@ -34,10 +34,13 @@ pub const ADAPTERS: &[Adapter] = &[
     Adapter {
         id: "codex",
         name: "Codex CLI",
-        bin: "codex",
+        // Codex speaks ACP only through a separate `codex-acp` bridge binary (Rust, no
+        // npm) — not a `codex` subcommand — so probe and spawn that same binary, or
+        // detection would pass on a bare `codex` install and then fail to launch.
+        bin: "codex-acp",
         acp_command: "codex-acp",
         model_env: None,
-        install_hint: "install Codex CLI: npm i -g @openai/codex",
+        install_hint: "needs the codex-acp ACP bridge on PATH — build github.com/cola-io/codex-acp (cargo build --release)",
     },
     Adapter {
         id: "gemini",
@@ -51,7 +54,7 @@ pub const ADAPTERS: &[Adapter] = &[
         id: "kimi",
         name: "Kimi CLI",
         bin: "kimi",
-        acp_command: "kimi --acp",
+        acp_command: "kimi acp",
         model_env: None,
         install_hint: "install Kimi CLI: see moonshotai/kimi-cli",
     },

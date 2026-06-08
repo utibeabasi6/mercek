@@ -1,6 +1,6 @@
 [package]
 name = "mercek"
-version = "0.3.3"
+version = "0.3.4"
 description = "A desktop IDE for AWS ECS"
 authors = ["Utibeabasi Umanah <utibeabasiumanah6@gmail.com>"]
 edition = "2021"

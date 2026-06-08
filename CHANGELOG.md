@@ -6,6 +6,20 @@ All notable changes to Mercek are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.3.4] - 2026-06-08
+
+### Changed
+
+- The agent picker reveals a harness's install instructions on click (inline) instead of
+  only as a hover tooltip, so they're readable.
+
+### Fixed
+
+- Kimi now connects via `kimi acp`; the adapter used the deprecated `kimi --acp`.
+- The Codex connector detects and points at the `codex-acp` ACP bridge (a separate binary,
+  built from source) instead of probing the `codex` CLI and suggesting an npm install that
+  doesn't provide ACP — so it no longer reports "detected" and then fails to launch.
+
 ## [0.3.3] - 2026-06-07
 
 ### Added
@@ -130,7 +144,8 @@ First public release. macOS (Apple Silicon and Intel).
 - Command palette and keyboard navigation.
 - Light and dark themes, with persisted table columns and CSV export.
 
-[Unreleased]: https://github.com/utibeabasi6/mercek/compare/v0.3.3...HEAD
+[Unreleased]: https://github.com/utibeabasi6/mercek/compare/v0.3.4...HEAD
+[0.3.4]: https://github.com/utibeabasi6/mercek/compare/v0.3.3...v0.3.4
 [0.3.3]: https://github.com/utibeabasi6/mercek/compare/v0.3.2...v0.3.3
 [0.3.0]: https://github.com/utibeabasi6/mercek/releases/tag/v0.3.0
 [0.2.0]: https://github.com/utibeabasi6/mercek/releases/tag/v0.2.0

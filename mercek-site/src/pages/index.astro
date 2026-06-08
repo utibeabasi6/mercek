@@ -8,8 +8,8 @@ const title = "Mercek — a desktop IDE for Amazon ECS";
 const description =
   "Mercek is a desktop app for Amazon ECS. It uses your existing AWS credentials, works across all your accounts and regions, and never sends anything to a server.";
 
-// Alternating feature sections. Shipped features only (see FEATURES.md). Each has a
-// screenshot slot in public/screenshots/, wired via `src` on the ScreenshotFrame.
+// Alternating feature sections. Shipped features only. Each has a screenshot slot in
+// public/screenshots/, wired via `src` on the ScreenshotFrame.
 const features = [
   {
     id: "discovery",
@@ -87,6 +87,8 @@ const features = [
 ];
 
 const capabilities = [
+  ["Multi-cluster overview", "A home view with service health across every account, and a needs-attention list."],
+  ["Create and delete", "New clusters, services, and task definitions — each behind a confirm or a diff."],
   ["Command palette", "Open any cluster, service, or task from the keyboard with ⌘K."],
   ["A diff before every write", "Scaling, deploys, and stops show what will change before they run."],
   ["Target group health", "Healthy, unhealthy, and draining targets per service."],
@@ -371,7 +373,7 @@ const faqLd = {
           rel="noopener noreferrer"
           class="rounded-md bg-accent px-6 py-3 text-[14px] font-semibold text-bg transition-opacity hover:opacity-90"
         >
-          Download for macOS
+          Download
         </a>
         <a
           href="/docs"

@@ -5,7 +5,7 @@
   <p>
     <a href="https://github.com/utibeabasi6/mercek/actions/workflows/ci.yml"><img src="https://github.com/utibeabasi6/mercek/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
     <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License" />
-    <img src="https://img.shields.io/badge/platform-macOS-lightgrey.svg" alt="macOS" />
+    <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey.svg" alt="macOS | Linux" />
   </p>
 </div>
 

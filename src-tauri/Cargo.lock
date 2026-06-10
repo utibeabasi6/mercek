@@ -298,9 +298,9 @@ checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
 
 [[package]]
 name = "aws-config"
-version = "1.8.17"
+version = "1.8.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "517aa062d8bd9015ee23d6daa5e1c1372328412fdae4e6c4c1be9b69c6ad37a2"
+checksum = "e33f815b73a3899c03b380d543532e5865f230dce9678d108dc10732a8682275"
 dependencies = [
  "aws-credential-types",
  "aws-runtime",
@@ -389,10 +389,11 @@ dependencies = [
 
 [[package]]
 name = "aws-sdk-applicationautoscaling"
-version = "1.106.0"
+version = "1.108.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d1c77a6a53f4a5e6bd4fe61821352bd02c821c95f4bbe8962066041c6107a6ad"
+checksum = "5d4b28be6418eeb0b98794b47f13169c60ffc23e21a82226c3e570e96f070a8f"
 dependencies = [
+ "arc-swap",
  "aws-credential-types",
  "aws-runtime",
  "aws-smithy-async",
@@ -413,10 +414,11 @@ dependencies = [
 
 [[package]]
 name = "aws-sdk-cloudwatch"
-version = "1.113.0"
+version = "1.115.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0bd1ebba805f62f5609ff8f3c125712c8fb7bd893be4615ee0f2995f0b1709b7"
+checksum = "b8154ce513f492a85eee2eabf6fee7e8d21778a29312173ca5396d2b3cd950fe"
 dependencies = [
+ "arc-swap",
  "aws-credential-types",
  "aws-runtime",
  "aws-smithy-async",
@@ -441,10 +443,11 @@ dependencies = [
 
 [[package]]
 name = "aws-sdk-cloudwatchlogs"
-version = "1.133.0"
+version = "1.135.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e56d3a4211b67ca21a1fe7d0b2a5bf10054fbdda2b85a3b0f1b19ed1bb34740"
+checksum = "7c0634c5c3b14a8d5381acd4b45240ea114e8bb4aa7953beb539289f7e77246c"
 dependencies = [
+ "arc-swap",
  "aws-credential-types",
  "aws-runtime",
  "aws-smithy-async",
@@ -466,9 +469,9 @@ dependencies = [
 
 [[package]]
 name = "aws-sdk-ec2"
-version = "1.228.0"
+version = "1.230.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "604bfc560c5ce54ebdfded25e75da00163df080ade22db7afe8a05d5b14034d0"
+checksum = "81638652cf034d91ea836945433d937cf11e848a8bda5a4c1a8e8fe1844b9351"
 dependencies = [
  "arc-swap",
  "aws-credential-types",
@@ -517,9 +520,9 @@ dependencies = [
 
 [[package]]
 name = "aws-sdk-ecs"
-version = "1.127.0"
+version = "1.128.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d774d6c63e2065233d1e52a667dc784c3bd7b419d4e4940c477ba3d3e4455e48"
+checksum = "8d4127ca984247bd68f93032afb2858d283edcc16e00a01b24ebe372952c6d72"
 dependencies = [
  "arc-swap",
  "aws-credential-types",
@@ -542,9 +545,9 @@ dependencies = [
 
 [[package]]
 name = "aws-sdk-elasticloadbalancingv2"
-version = "1.114.0"
+version = "1.115.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d556a89d68dd2f6f377cda97b466e690238e80cf6c1eaf569979c2d2b1f29292"
+checksum = "bd5265d7d80644517b0c388cf9746bcc69930a929c8486af96c1312da5874967"
 dependencies = [
  "arc-swap",
  "aws-credential-types",
@@ -568,10 +571,11 @@ dependencies = [
 
 [[package]]
 name = "aws-sdk-sso"
-version = "1.100.0"
+version = "1.101.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bee2719d4a5e5e147bb9e9b77490df6ece750df1094968aa857b09b618a1881a"
+checksum = "b647baea49ff551960b904f905681e9b4765a6c4ea08631e89dc52d8bd3f5896"
 dependencies = [
+ "arc-swap",
  "aws-credential-types",
  "aws-runtime",
  "aws-smithy-async",
@@ -592,9 +596,9 @@ dependencies = [
 
 [[package]]
 name = "aws-sdk-ssooidc"
-version = "1.102.0"
+version = "1.103.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b30d254992d56ef19f430396e5765b11e0f5bd21a7a557cb12fca1c8c18b9636"
+checksum = "7ae401c65ff288aa7873117fe535cd32b7b1bb0bc43751d28901a1d5f20636b9"
 dependencies = [
  "arc-swap",
  "aws-credential-types",
@@ -617,10 +621,11 @@ dependencies = [
 
 [[package]]
 name = "aws-sdk-sts"
-version = "1.105.0"
+version = "1.106.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "59f4f8065fe615dbed9096458ba98dda6d641553ffd5aedd27e37e65211aca9f"
+checksum = "4c80de7bb7d03e9ca8c9fd7b489f20f3948d3f3be91a7953591347d238115408"
 dependencies = [
+ "arc-swap",
  "aws-credential-types",
  "aws-runtime",
  "aws-smithy-async",
